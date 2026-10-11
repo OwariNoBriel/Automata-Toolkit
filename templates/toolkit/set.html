@@ -1,9 +1,8 @@
 <section id="page-set" class="page">
   <div class="input">
-    <label>Set A <input id="set-a" placeholder="blank = left subtree + root"></label>
-    <label>Set B <input id="set-b" placeholder="blank = right subtree + root"></label>
+    <label>Set A <input id="set-a" placeholder="e.g. 1, 2, 3 (commas or spaces)" autocomplete="off"></label>
+    <label>Set B <input id="set-b" placeholder="e.g. 3, 4" autocomplete="off"></label>
     <button id="set-run">Run</button>
   </div>
-  <div id="set-output"></div>
+  <div id="set-output"><p class="hint">Enter two sets and press Run.</p></div>
 </section>
-<script src="{{ url_for('static', filename='set.js') }}"></script>

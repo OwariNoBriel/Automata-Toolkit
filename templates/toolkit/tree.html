@@ -1,14 +1,8 @@
 <section id="page-tree" class="page active">
   <div class="input">
-    <label>Preorder <input id="tree-pre" placeholder="A B D E C F"></label>
-    <label>Inorder <input id="tree-ino" placeholder="D B E A F C"></label>
-    <label>Postorder <input id="tree-post" placeholder="D E B F C A"></label>
-    <div class="row">
-      <select id="tree-example" aria-label="Examples"><option value="">Load an example</option></select>
-      <button id="tree-go">Analyze</button>
-    </div>
+    <label>Expression <input id="tree-expr" value="A+B/D-E" placeholder="A+B/D-E" autocomplete="off" spellcheck="false"></label>
+    <button id="tree-go">Build tree</button>
     <p id="tree-error" role="alert"></p>
   </div>
-  <div id="tree-output"><p class="hint">Analyze a tree to see it here.</p></div>
+  <div id="tree-output"><p class="hint">Enter an expression and press Build tree.</p></div>
 </section>
-<script src="{{ url_for('static', filename='tree.js') }}"></script>

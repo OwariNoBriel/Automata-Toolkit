@@ -6,7 +6,7 @@ This project is organized so each feature tab has its own UI, its own frontend l
 
 ### Shared app shell
 - `app.py`  
-  Flask app entry point. Handles route rendering and the `/api/analyze` and `/api/regex` endpoints.
+  Flask app entry point. Handles route rendering and the `/api/expression` and `/api/regex` endpoints.
 
 - `templates/index.html`  
   Main page shell. This is the top-level layout that includes the sidebar and the tab sections.
@@ -220,9 +220,9 @@ It is only responsible for the Regular Operations tab UI and request flow.
 ### Example: `static/tree.js`
 `tree.js` does the same for tree operations:
 
-- reads preorder/inorder/postorder inputs
-- calls the Python tree logic through the API
-- displays traversal/output/tree structure
+- reads the expression input
+- calls the Python expression-tree logic through `/api/expression`
+- draws the preorder, inorder and postorder trees
 
 This pattern is repeated for the text, set and regex tabs.
 

@@ -1,4 +1,4 @@
-# Traversal Toolkit
+# Automata Toolkit
 
 A modular web app for learning binary trees, string operations, sets, and regular operations. The project has been refactored into a cleaner tab-based layout with separate UI sections and independent per-tab logic, while keeping the core toolkit operations accessible from a single Flask app.
 
@@ -33,7 +33,7 @@ A modular web app for learning binary trees, string operations, sets, and regula
 
 ## Project structure
 
-- `app.py` – Flask entry point and `/api/analyze` and `/api/regex` routes
+- `app.py` – Flask entry point and `/api/expression` and `/api/regex` routes
 - `traversal_toolkit/` – toolkit logic
   - `tree.py` – binary tree building and traversal logic
   - `text_ops.py` – string operations
@@ -46,20 +46,19 @@ A modular web app for learning binary trees, string operations, sets, and regula
   - `toolkit/` – individual page templates for each tool
 - `static/`
   - `app.js` – page switching and shared shell behavior
-  - `tree.js` – tree tab logic
+  - `tree.js` – expression tree tab logic
   - `text.js` – text tab logic
   - `set.js` – set tab logic
   - `regex.js` – Regular Operations tab logic
   - `style.css` – dark responsive styling
-- `samples/examples.json` – example data
 - `tests/test_core.py` – project tests and regression checks
 
 ## Features
 
 ### Binary Tree
-- Build trees from preorder + inorder or postorder + inorder
-- Visualize output trees
-- Compute tree properties such as height and traversal results
+- Type an arithmetic expression such as `A+B/D-E`
+- See its expression tree drawn three times, with preorder, inorder and postorder visit numbers
+- Read the prefix, infix and postfix forms of the expression
 
 ### Text Operations
 - Input strings and run multiple text transformations
@@ -69,7 +68,8 @@ A modular web app for learning binary trees, string operations, sets, and regula
 ### Sets
 - Work with custom sets or generated values
 - Perform union, intersection, difference, and symmetric difference
-- View cardinality and set relationships
+- See Cartesian products (A × B, B × A) and power sets
+- View cardinality
 
 ### Regular Operations
 - Enter an expression with `*`, `+`, `|`, `( )` and concatenation

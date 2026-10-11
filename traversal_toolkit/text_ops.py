@@ -14,6 +14,6 @@ def string_ops(a, b, sub=""):
         (f"Count of '{sub}' in A", a.count(sub)),
         (f"Replace '{sub}' with '*' in A", a.replace(sub, "*")),
         ("A == B", a == b),
-        ("A is a palindrome", a == a[::-1]),
+        ("A is a palindrome", len(a) > 1 and a == a[::-1]),
         ("A starts with B[0]", a.startswith(b[:1])),
     ]

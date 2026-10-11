@@ -10,7 +10,7 @@
 <header>
   <button id="toggle-sidebar" class="sidebar-toggle">☰</button>
   <h1>Automata Toolkit</h1>
-  <p>Enter tree traversals, then explore the tree, strings, sets and regular operations.</p>
+  <p>Explore expression trees, strings, sets and regular operations.</p>
 </header>
 <aside id="sidebar" class="sidebar open">
   <nav>
@@ -21,47 +21,11 @@
   </nav>
 </aside>
 <main>
-  <section id="page-tree" class="page active">
-    <div class="input">
-      <label>Preorder <input id="pre" placeholder="A B D E C F"></label>
-      <label>Inorder <input id="ino" placeholder="D B E A F C"></label>
-      <label>Postorder <input id="post" placeholder="D E B F C A"></label>
-      <div class="row">
-        <select id="example" aria-label="Examples"><option value="">Load an example</option></select>
-        <button id="go">Analyze</button>
-      </div>
-      <p id="error" role="alert"></p>
-    </div>
-    <div id="out-tree"><p class="hint">Analyze a tree to see it here.</p></div>
-  </section>
+  {% include 'toolkit/tree.html' %}
 
-  <section id="page-text" class="page">
-    <div class="input">
-      <label>Text A <input id="text-input" placeholder="Enter first text"></label>
-      <label>Text B <input id="text-input-b" placeholder="Enter second text"></label>
-      <button id="text-analyze">Analyze</button>
-    </div>
-    <div id="out-combined" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);max-width:1600px;margin:20px auto 0;"></div>
-    <div id="results-grid" style="display:none;grid-template-columns:1fr 1fr;gap:20px;max-width:1600px;margin:20px auto 0;width:100%;">
-      <div style="display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
-        <h3 style="margin:0 0 12px 0;color:var(--acc);text-align:center;">Text A</h3>
-        <div id="out-text-a"></div>
-      </div>
-      <div style="display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
-        <h3 style="margin:0 0 12px 0;color:var(--acc);text-align:center;">Text B</h3>
-        <div id="out-text-b"></div>
-      </div>
-    </div>
-  </section>
+  {% include 'toolkit/text.html' %}
 
-  <section id="page-set" class="page">
-    <div class="input">
-      <label>Set A <input id="set_a" placeholder="blank = left subtree + root"></label>
-      <label>Set B <input id="set_b" placeholder="blank = right subtree + root"></label>
-      <button id="set-analyze">Run</button>
-    </div>
-    <div id="out-set"></div>
-  </section>
+  {% include 'toolkit/set.html' %}
 
   {% include 'toolkit/regex.html' %}
 </main>
@@ -70,6 +34,5 @@
 <script src="{{ url_for('static', filename='text.js') }}"></script>
 <script src="{{ url_for('static', filename='set.js') }}"></script>
 <script src="{{ url_for('static', filename='regex.js') }}"></script>
-<script src="{{ url_for('static', filename='expr.js') }}"></script>
 </body>
 </html>

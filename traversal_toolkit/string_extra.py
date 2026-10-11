@@ -10,9 +10,9 @@ def _suffix(s, n=3):
 
 
 def _is_palindrome(s):
-    """Check if string is palindrome (trim spaces, ignore case)."""
+    """Check if string is palindrome (ignore spaces and case). Needs 2+ characters."""
     clean = s.lower().replace(" ", "")
-    return clean == clean[::-1]
+    return len(clean) > 1 and clean == clean[::-1]
 
 
 def string_extra_ops(a, b):

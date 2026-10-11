@@ -7,6 +7,8 @@ if (textSection) {
   const textInputs = {
     a: document.getElementById('text-input-a'),
     b: document.getElementById('text-input-b'),
+    prefix: document.getElementById('text-prefix'),
+    suffix: document.getElementById('text-suffix'),
     analyze: document.getElementById('text-analyze'),
     combined: document.getElementById('text-output-combined'),
     results: document.getElementById('text-results-grid'),
@@ -14,20 +16,42 @@ if (textSection) {
     outputB: document.getElementById('text-output-b')
   };
 
+  const reverse = (text) => Array.from(text).reverse().join('');
+
+  // Ignores spaces and letter case. Needs at least 2 characters, so one character is not a palindrome.
+  // Empty text is reported as "No text".
+  function palindromeAnswer(text) {
+    const clean = text.toLowerCase().replace(/\s+/g, '');
+    if (!clean) return 'No text';
+    return clean.length > 1 && clean === reverse(clean);
+  }
+
+  function operationsFor(text, prefix, suffix) {
+    const rows = [
+      ['Reversed', reverse(text)],
+      ['Is palindrome', palindromeAnswer(text)],
+      ['Uppercase', text.toUpperCase()],
+      ['Lowercase', text.toLowerCase()],
+      ['First 3 chars', text.slice(0, 3)],
+      ['Last 3 chars', text.slice(-3)],
+      ['Unique chars', new Set(text).size]
+    ];
+    if (prefix) rows.push([`Starts with "${prefix}"`, text.startsWith(prefix)]);
+    if (suffix) rows.push([`Ends with "${suffix}"`, text.endsWith(suffix)]);
+    return rows;
+  }
+
   function analyzeText() {
     const a = textInputs.a.value;
     const b = textInputs.b.value;
+    const prefix = textInputs.prefix.value;
+    const suffix = textInputs.suffix.value;
 
     if (!a && !b) {
       textInputs.combined.style.display = 'none';
       textInputs.results.style.display = 'none';
       return;
     }
-
-    const cleanA = a.toLowerCase().replace(/\s+/g, '');
-    const reversedA = cleanA.split('').reverse().join('');
-    const cleanB = b.toLowerCase().replace(/\s+/g, '');
-    const reversedB = cleanB.split('').reverse().join('');
 
     const combined = [
       ['Text A', a],
@@ -36,32 +60,14 @@ if (textSection) {
       ['Length A / B', `${a.length} / ${b.length}`]
     ];
 
-    const opsA = [
-      ['Reversed', a.split('').reverse().join('')],
-      ['Is palindrome', cleanA === reversedA],
-      ['Uppercase', a.toUpperCase()],
-      ['Lowercase', a.toLowerCase()],
-      ['First 3 chars', a.substring(0, 3)],
-      ['Last 3 chars', b ? a.substring(a.length - 3) : ''],
-      ['Unique chars', new Set(a).size]
-    ];
-
-    const opsB = [
-      ['Reversed', b.split('').reverse().join('')],
-      ['Is palindrome', cleanB === reversedB],
-      ['Uppercase', b.toUpperCase()],
-      ['Lowercase', b.toLowerCase()],
-      ['First 3 chars', b.substring(0, 3)],
-      ['Last 3 chars', b.substring(b.length - 3)],
-      ['Unique chars', new Set(b).size]
-    ];
-
     textInputs.combined.style.display = 'block';
     textInputs.results.style.display = 'grid';
     textInputs.combined.innerHTML = table(combined);
-    textInputs.outputA.innerHTML = table(opsA);
-    textInputs.outputB.innerHTML = table(opsB);
+    textInputs.outputA.innerHTML = table(operationsFor(a, prefix, suffix));
+    textInputs.outputB.innerHTML = table(operationsFor(b, prefix, suffix));
   }
 
   textInputs.analyze.addEventListener('click', analyzeText);
+  [textInputs.a, textInputs.b, textInputs.prefix, textInputs.suffix].forEach((input) =>
+    input.addEventListener('keydown', (event) => { if (event.key === 'Enter') analyzeText(); }));
 }

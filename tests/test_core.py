@@ -44,6 +44,19 @@ def test_string_extra_ops():
     assert rows["B is a palindrome"] is False
 
 
+def test_single_character_is_not_a_palindrome():
+    assert dict(string_extra.string_extra_ops("2", "a b"))["A is a palindrome"] is False
+    assert dict(string_extra.string_extra_ops("2", "a b"))["B is a palindrome"] is False
+    assert dict(text_ops.string_ops("2", "x"))["A is a palindrome"] is False
+    assert dict(string_extra.string_extra_ops("22", "x"))["A is a palindrome"] is True
+
+
+def test_empty_text_is_not_a_palindrome():
+    assert dict(string_extra.string_extra_ops("", "abba"))["A is a palindrome"] is False
+    assert dict(string_extra.string_extra_ops("", "abba"))["B is a palindrome"] is True
+    assert dict(text_ops.string_ops("", "x"))["A is a palindrome"] is False
+
+
 def test_index_renders_sidebar_and_tabs():
     from pathlib import Path
 
