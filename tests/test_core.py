@@ -57,6 +57,15 @@ def test_text_analyze_rows():
     assert text_ops.analyze("", "") == {"empty": True}
 
 
+def test_prefix_and_suffix_outputs_show_all_progressive_values():
+    rows = dict(text_ops.string_ops("gab", "xyz"))
+    assert rows["Prefixes of A"] == "g ga gab"
+    assert rows["Suffixes of A"] == "b ab gab"
+    assert rows["Prefixes of B"] == "x xy xyz"
+    assert rows["Suffixes of B"] == "z yz xyz"
+
+
+
 # ---------- Sets ----------
 
 def test_set_operations_match_builtins():
