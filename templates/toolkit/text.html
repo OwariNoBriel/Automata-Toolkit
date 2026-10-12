@@ -2,15 +2,11 @@
   <div class="input">
     <label>Text A <input id="text-input-a" placeholder="Enter first text" autocomplete="off"></label>
     <label>Text B <input id="text-input-b" placeholder="Enter second text" autocomplete="off"></label>
-    <div class="two-col">
-      <label>Custom prefix <input id="text-prefix" placeholder="e.g. ab" autocomplete="off"></label>
-      <label>Custom suffix <input id="text-suffix" placeholder="e.g. yz" autocomplete="off"></label>
-    </div>
-    <p class="hint small">Optional. Checks whether each text starts with the prefix or ends with the suffix (case-sensitive).</p>
+    <p class="hint small">The analysis shows every progressive prefix and suffix for each text.</p>
     <button id="text-analyze">Analyze</button>
   </div>
   <div id="text-output-combined" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);max-width:1600px;margin:20px auto 0;"></div>
-  <div id="text-results-grid" style="display:none;grid-template-columns:1fr 1fr;gap:20px;max-width:1600px;margin:20px auto 0;width:100%;">
+  <div id="results-grid" style="display:none;grid-template-columns:1fr 1fr;gap:20px;max-width:1600px;margin:20px auto 0;width:100%;">
     <div style="display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
       <h3 style="margin:0 0 12px 0;color:var(--acc);text-align:center;">Text A</h3>
       <div id="text-output-a"></div>

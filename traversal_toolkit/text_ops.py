@@ -56,6 +56,19 @@ def first_chars(text, n):  # the prefix made of the first n characters
     return result  # the first n characters (or fewer if the text is short)
 
 
+def prefixes(text):  # every progressive prefix: e.g. "gab" -> "g ga gab"
+    result = []
+    for i in range(1, length(text) + 1):
+        result.append(first_chars(text, i))
+    return " ".join(result)
+
+
+def suffixes(text):  # every progressive suffix: e.g. "gab" -> "b ab gab"
+    result = []
+    for i in range(length(text) - 1, -1, -1):
+        result.append(last_chars(text, length(text) - i))
+    return " ".join(result)
+
 def last_chars(text, n):  # the suffix made of the last n characters
     size = length(text)  # how long the text is
     index = size - n  # the position where the suffix starts
@@ -128,6 +141,8 @@ def _palindrome_answer(text):  # what the page shows in the "Is palindrome" row
 
 def _rows_for(text, prefix, suffix):  # the operation rows for one text
     rows = [  # one row per operation: [label, answer]
+        ["Prefixes", prefixes(text)],
+        ["Suffixes", suffixes(text)],
         ["Reversed", reverse(text)],  # backwards
         ["Is palindrome", _palindrome_answer(text)],  # same both ways?
         ["Uppercase", to_upper(text)],  # all capitals
@@ -157,3 +172,24 @@ def analyze(a, b, prefix="", suffix=""):  # everything the Text tab shows, for t
         "a": _rows_for(a, prefix, suffix),  # operations on text A
         "b": _rows_for(b, prefix, suffix),  # operations on text B
     }
+
+
+def string_ops(a, b, sub=""):
+    sub = sub or first_chars(a, 1)
+    return [
+        ("A", a),
+        ("B", b),
+        ("Prefixes of A", prefixes(a)),
+        ("Suffixes of A", suffixes(a)),
+        ("Prefixes of B", prefixes(b)),
+        ("Suffixes of B", suffixes(b)),
+        ("Concatenation (A + B)", concatenate(a, b)),
+        ("Length of A / B", f"{length(a)} / {length(b)}"),
+        ("Reverse of A", reverse(a)),
+        ("Uppercase A", to_upper(a)),
+        ("Lowercase A", to_lower(a)),
+        ("Slice A[0:3]", first_chars(a, 3)),
+        ("A == B", a == b),
+        ("A is a palindrome", is_palindrome(a)),
+        ("A starts with B[0]", starts_with(a, first_chars(b, 1))),
+    ]
