@@ -90,3 +90,96 @@ if (setSection) { // only run when this page exists in the HTML
     });
   }
 }
+(() => {
+  if (window.__setExprLoaded) return;
+  window.__setExprLoaded = true;
+
+  const $ = id => document.getElementById(id);
+  const parseSet = s => new Set((s || '').split(/[,\s]+/).filter(Boolean));
+  const sortItems = arr => arr.sort((x, y) =>
+    isNaN(x - y) ? String(x).localeCompare(String(y)) : x - y);
+  const show = s => '{' + sortItems([...s]).join(', ') + '}';
+
+  const UNION = new Set(['u', '∪', '+']);
+  const INTER = new Set(['n', '∩', '*']);
+  const DIFF  = new Set(['-', '\\', '−']);
+  const SYM   = new Set(['d', 'Δ', '△', '^']);
+
+  const OPS = {
+    union: (a, b) => new Set([...a, ...b]),
+    inter: (a, b) => new Set([...a].filter(x => b.has(x))),
+    diff:  (a, b) => new Set([...a].filter(x => !b.has(x))),
+    sym:   (a, b) => new Set([...a, ...b].filter(x => a.has(x) !== b.has(x))),
+  };
+
+  function tokenize(src) {
+    const out = [];
+    for (const ch of src.replace(/\s+/g, '')) {
+      const c = ch.toLowerCase();
+      if (c === '(' || c === ')') out.push({ t: ch });
+      else if (c === 'a' || c === 'b') out.push({ t: 'set', v: c });
+      else if (UNION.has(c) || UNION.has(ch)) out.push({ t: 'op', v: 'union' });
+      else if (INTER.has(c) || INTER.has(ch)) out.push({ t: 'op', v: 'inter' });
+      else if (DIFF.has(ch)) out.push({ t: 'op', v: 'diff' });
+      else if (SYM.has(c) || SYM.has(ch)) out.push({ t: 'op', v: 'sym' });
+      else throw Error(`Unknown symbol "${ch}"`);
+    }
+    return out;
+  }
+
+  // all operators have equal precedence, evaluated left to right
+  function evaluate(src, sets) {
+    const toks = tokenize(src);
+    let i = 0;
+
+    function operand() {
+      const tk = toks[i++];
+      if (!tk) throw Error('Expression ended too early');
+      if (tk.t === 'set') return sets[tk.v];
+      if (tk.t === '(') {
+        const v = chain();
+        if (!toks[i] || toks[i].t !== ')') throw Error('Missing closing )');
+        i++;
+        return v;
+      }
+      throw Error('Expected a set or "("');
+    }
+    function chain() {
+      let left = operand();
+      while (toks[i] && toks[i].t === 'op') {
+        const op = toks[i++].v;
+        left = OPS[op](left, operand());
+      }
+      return left;
+    }
+
+    const result = chain();
+    if (i < toks.length) throw Error(toks[i].t === ')' ? 'Extra )' : 'Missing operator between sets');
+    return result;
+  }
+
+  function run() {
+    const box = $('set-expr');
+    const out = $('set-expr-out');
+    if (!box || !out) return;
+    const src = box.value.trim();
+    if (!src) { out.innerHTML = '<p class="hint">Type an expression using A and B.</p>'; return; }
+    try {
+      const sets = { a: parseSet($('set-a').value), b: parseSet($('set-b').value) };
+      const r = evaluate(src, sets);
+      out.innerHTML =
+        `<table><tr><th>Expression</th><td>${src.replace(/</g, '&lt;')}</td></tr>` +
+        `<tr><th>Result</th><td>${show(r)}</td></tr>` +
+        `<tr><th>Size</th><td>${r.size}</td></tr></table>`;
+    } catch (e) {
+      out.innerHTML = `<p class="no">${e.message}</p>`;
+    }
+  }
+
+  document.addEventListener('input', e => {
+    if (['set-expr', 'set-a', 'set-b'].includes(e.target.id)) run();
+  });
+  document.addEventListener('click', e => {
+    if (e.target.closest('#set-run')) run();
+  });
+})();

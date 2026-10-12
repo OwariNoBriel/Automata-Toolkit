@@ -77,3 +77,56 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 #tree-output h3{margin:16px 0 6px}
 #tree-output h3 small{font-weight:400;opacity:.7;margin-left:8px}
 #tree-output .seq{font-family:ui-monospace,Consolas,monospace;margin:6px 0 0;word-break:break-all}
+
+/* ---------- Text Operations page ---------- */
+.text-tool .card {
+  background: #272a3c;
+  border: 1px solid #3a3e55;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 0 auto 20px;
+  width: 100%;
+  max-width: 640px;
+  box-sizing: border-box;
+}
+.text-tool .card h3 { margin: 0 0 14px; color: #b9a2f0; font-size: 1rem; }
+
+.text-tool .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.text-tool .field label { font-size: .8rem; font-weight: 600; color: #aab0c8; }
+
+.text-tool .card input,
+.text-tool .card select {
+  background: #1f2130; color: #e6e8f2;
+  border: 1px solid #3a3e55; border-radius: 8px;
+  padding: 10px 12px; font: inherit; width: 100%; box-sizing: border-box;
+}
+.text-tool .card input:focus,
+.text-tool .card select:focus { outline: 2px solid #b9a2f0; border-color: transparent; }
+
+.text-tool .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.text-tool .btn-row + .btn-row { margin-top: 10px; }
+.text-tool .card button {
+  background: #b9a2f0; color: #1b1d2b; border: 0; border-radius: 8px;
+  padding: 9px 16px; font-weight: 600; cursor: pointer;
+}
+.text-tool .card button:hover { filter: brightness(1.1); }
+.text-tool .card button.ghost { background: transparent; color: #b9a2f0; border: 1px solid #b9a2f0; }
+
+.text-tool #steps { width: 100%; border-collapse: collapse; margin-top: 0; }
+.text-tool #steps th,
+.text-tool #steps td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #3a3e55; }
+.text-tool #steps th { width: auto; color: #aab0c8; font-size: .8rem; }
+.text-tool #steps td { font-family: ui-monospace, monospace; }
+
+.text-tool .kv {
+  display: grid; grid-template-columns: 110px 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid #3a3e55; align-items: baseline;
+}
+.text-tool .kv:last-child { border-bottom: 0; }
+.text-tool .kv span { color: #aab0c8; font-size: .85rem; font-weight: 600; }
+.text-tool .kv b {
+  color: #e6e8f2; font-weight: 500; font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.text-tool .err { color: #ff8a8a; font-size: .85rem; min-height: 1em; }

@@ -1,8 +1,32 @@
 <section id="page-tree" class="page active">
-  <div class="input">
-    <label>Expression <input id="tree-expr" value="A+B/D-E" placeholder="A+B/D-E" autocomplete="off" spellcheck="false"></label>
-    <button id="tree-go">Build tree</button>
-    <p id="tree-error" role="alert"></p>
+  <p class="hint">Type an expression into <strong>any one</strong> box and press Enter (or Build). The other two fill in automatically.</p>
+  <p id="tree-error" role="alert"></p>
+ 
+  <div class="tree-head">
+    <h3>Preorder (prefix) <small>Root → Left → Right</small></h3>
+    <div class="tree-entry">
+      <input id="in-prefix" placeholder="- + A / B D E" aria-label="Prefix expression">
+      <button type="button" data-build="prefix">Build</button>
+    </div>
   </div>
-  <div id="tree-output"><p class="hint">Enter an expression and press Build tree.</p></div>
+  <div class="tree" id="draw-prefix"></div>
+ 
+  <div class="tree-head">
+    <h3>Inorder (infix) <small>Left → Root → Right</small></h3>
+    <div class="tree-entry">
+      <input id="in-infix" placeholder="A+B/D-E" aria-label="Infix expression">
+      <button type="button" data-build="infix">Build</button>
+    </div>
+  </div>
+  <div class="tree" id="draw-infix"></div>
+ 
+  <div class="tree-head">
+    <h3>Postorder (postfix) <small>Left → Right → Root</small></h3>
+    <div class="tree-entry">
+      <input id="in-postfix" placeholder="A B D / + E -" aria-label="Postfix expression">
+      <button type="button" data-build="postfix">Build</button>
+    </div>
+  </div>
+  <div class="tree" id="draw-postfix"></div>
 </section>
+ 

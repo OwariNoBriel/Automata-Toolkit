@@ -1,87 +1,122 @@
-// Binary Tree tab. Python builds the tree and numbers the traversals; this file only sends the text and draws it.
+// Binary Tree tab: type an expression in prefix, infix OR postfix and the other two fill in.
 const treeSection = document.getElementById('page-tree'); // the whole Binary Tree page
 if (treeSection) { // only run when this page exists in the HTML
+  const style = document.createElement('style'); // small bit of CSS just for this page
+  style.textContent = `#page-tree .tree-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 8px}
+  #page-tree .tree-head h3{margin:0}#page-tree .tree-head small{font-weight:400;opacity:.7;margin-left:8px}
+  #page-tree .tree-entry{display:flex;gap:8px;flex:1;min-width:260px;max-width:520px}#page-tree .tree-entry input{flex:1;min-width:0}
+  #page-tree .tree{overflow-x:auto;border-radius:8px}#tree-error{color:#e5534b;min-height:1.2em;margin:6px 0 0}`;
+  document.head.append(style);
+ 
   const esc = (value) => String(value) // makes text safe to put inside HTML
-    .replace(/&/g, '&amp;') // & becomes &amp;
-    .replace(/</g, '&lt;') // < becomes &lt;
-    .replace(/>/g, '&gt;') // > becomes &gt;
-    .replace(/"/g, '&quot;'); // " becomes &quot;
-
-  const treeInputs = { // the page elements we talk to
-    expr: document.getElementById('tree-expr'), // the expression box
-    go: document.getElementById('tree-go'), // the Build tree button
-    error: document.getElementById('tree-error'), // where error messages appear
-    output: document.getElementById('tree-output') // where the drawings appear
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+ 
+  const treeError = document.getElementById('tree-error'); // where error messages appear
+  const kinds = { // one entry per box: its input, its drawing area, and which visit order it shows
+    prefix:  { input: document.getElementById('in-prefix'),  draw: document.getElementById('draw-prefix'),  order: 'pre' },
+    infix:   { input: document.getElementById('in-infix'),   draw: document.getElementById('draw-infix'),   order: 'in' },
+    postfix: { input: document.getElementById('in-postfix'), draw: document.getElementById('draw-postfix'), order: 'post' },
   };
-
-  function isOperator(value) { // is this node an operator (so we can colour it differently)?
-    return value.length === 1 && '+-*/^'.includes(value); // one character that is one of + - * / ^
+ 
+  const OPERATORS = '+-*/^'; // the operators we understand
+  const isOperator = (value) => value.length === 1 && OPERATORS.includes(value); // is this symbol an operator?
+ 
+  function operand(token) { // checks that a symbol is a valid operand (letters, numbers, _ or .)
+    if (!/^[A-Za-z0-9_.]+$/.test(token)) throw new Error(`"${token}" is not a valid operand or operator.`);
+    return token;
   }
-
-  function drawTree(root, key) { // draw one tree; key says which visit number to show (pre, ino or post)
-    const nodes = []; // every node of the tree
-    const edges = []; // every parent-child pair, drawn as a line
-
-    function place(node, depth, parent) { // work out where one node sits, then do its children
-      if (!node) return; // an empty spot has nothing to draw
-      node.px = 36 + node.x * 52; // sideways position comes from the inorder slot Python gave the node
-      node.py = 32 + depth * 64; // downward position comes from how deep the node is
-      nodes.push(node); // remember the node
-      if (parent) edges.push([parent, node]); // remember the line up to its parent
-      place(node.l, depth + 1, node); // place the left child one level lower
-      place(node.r, depth + 1, node); // place the right child one level lower
-    }
-    place(root, 0, null); // start at the root, which has no parent
-
-    let maxX = 0; // the right-most slot used
-    let maxY = 0; // the lowest position used
-    for (const node of nodes) { // look at every node
-      if (node.x > maxX) maxX = node.x; // remember the largest slot
-      if (node.py > maxY) maxY = node.py; // remember the largest depth position
-    }
-    const width = 72 + maxX * 52; // drawing width that fits every node
-    const height = maxY + 40; // drawing height that fits every node
-
-    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#fff">`; // open the drawing
-    for (const [a, b] of edges) { // draw the lines first so circles sit on top
-      svg += `<line x1="${a.px}" y1="${a.py}" x2="${b.px}" y2="${b.py}" stroke="#9fb1bb" stroke-width="2"/>`; // one line per edge
-    }
-    for (const node of nodes) { // then draw each node
-      const fill = isOperator(node.v) ? '#fde8c8' : '#e3f3f4'; // operators orange, operands blue
-      svg += `<circle cx="${node.px}" cy="${node.py}" r="18" fill="${fill}" stroke="#0e7c86" stroke-width="2"/>`; // the circle
-      svg += `<text x="${node.px}" y="${node.py + 5}" text-anchor="middle" font-size="14" fill="#14262f">${esc(node.v)}</text>`; // its value
-      svg += `<circle cx="${node.px + 14}" cy="${node.py - 14}" r="9" fill="#0e7c86"/>`; // the small badge circle
-      svg += `<text x="${node.px + 14}" y="${node.py - 10}" text-anchor="middle" font-size="11" fill="#fff">${node[key]}</text>`; // the visit number
-    }
-    return svg + '</svg>'; // close the drawing and hand it back
+ 
+  function symbols(text) { // split the typed text into symbols
+    const parts = text.trim().split(/\s+/).filter(Boolean); // split on spaces
+    return parts.length === 1 && parts[0].length > 1 ? [...parts[0]] : parts; // no spaces at all: one character per symbol
   }
-
-  async function buildTree() { // send the expression to Python and show the result
-    const response = await fetch('/api/expression', { // ask the server
-      method: 'POST', // we are sending data
-      headers: { 'Content-Type': 'application/json' }, // the data is JSON
-      body: JSON.stringify({ expr: treeInputs.expr.value }) // the typed expression
-    });
-    const data = await response.json(); // read the answer
-    treeInputs.error.textContent = data.error || ''; // show an error message, or clear the old one
-    if (data.error) return; // nothing to draw when the expression is malformed
-
-    const views = [ // the three traversals to show
-      ['Preorder (prefix)', 'Root → Left → Right', 'pre', data.prefix], // title, rule, number key, text
-      ['Inorder (infix)', 'Left → Root → Right', 'ino', data.infix], // inorder uses the "ino" numbers
-      ['Postorder (postfix)', 'Left → Right → Root', 'post', data.postfix] // postorder uses the "post" numbers
-    ];
-    let html = ''; // the page content we are building
-    for (const [name, rule, key, text] of views) { // one section per traversal
-      html += `<h3>${name} <small>${rule}</small></h3>`; // heading with its rule
-      html += `<div class="tree">${drawTree(data.tree, key)}</div>`; // the drawn tree
-      html += `<p class="seq">${esc(text)}</p>`; // the traversal written out
+ 
+  function prefixToInfix(tokens) { // prefix -> fully bracketed infix, e.g. - + A B C -> ((A+B)-C)
+    let pos = 0; // how many symbols we have used so far
+    function read() { // read one whole sub-expression
+      if (pos >= tokens.length) throw new Error('The prefix expression is incomplete.');
+      const token = tokens[pos++]; // take the next symbol
+      if (isOperator(token)) { const left = read(); const right = read(); return '(' + left + token + right + ')'; } // operator: read its two sides
+      return operand(token); // otherwise it is a single operand
     }
-    treeInputs.output.innerHTML = html; // put it on the page
+    const result = read(); // read the whole expression
+    if (pos < tokens.length) throw new Error('The prefix expression has extra symbols at the end.');
+    return result;
   }
-
-  treeInputs.go.addEventListener('click', buildTree); // build when the button is clicked
-  treeInputs.expr.addEventListener('keydown', (event) => { // also when a key is pressed in the box
-    if (event.key === 'Enter') buildTree(); // but only the Enter key
+ 
+  function postfixToInfix(tokens) { // postfix -> fully bracketed infix, e.g. A B + C - -> ((A+B)-C)
+    const stack = []; // finished sub-expressions waiting for an operator
+    for (const token of tokens) {
+      if (isOperator(token)) { // operator: join the last two sub-expressions
+        if (stack.length < 2) throw new Error('The postfix expression is missing an operand.');
+        const right = stack.pop(); const left = stack.pop();
+        stack.push('(' + left + token + right + ')');
+      } else {
+        stack.push(operand(token)); // operand: put it on the stack
+      }
+    }
+    if (stack.length !== 1) throw new Error('The postfix expression is missing an operator.');
+    return stack[0];
+  }
+ 
+  function toInfix(kind, text) { // whatever was typed -> infix text the server understands
+    if (!text.trim()) throw new Error('Type an expression first.');
+    if (kind === 'infix') return text; // already infix
+    const tokens = symbols(text);
+    return kind === 'prefix' ? prefixToInfix(tokens) : postfixToInfix(tokens);
+  }
+ 
+  const walk = { // visit order of the nodes
+    pre:  (n) => n ? [n, ...walk.pre(n.l), ...walk.pre(n.r)] : [], // root, left, right
+    in:   (n) => n ? [...walk.in(n.l), n, ...walk.in(n.r)] : [], // left, root, right
+    post: (n) => n ? [...walk.post(n.l), ...walk.post(n.r), n] : [], // left, right, root
+  };
+ 
+  function drawTree(root, order) { // draw one tree; badges show the visit number for this order
+    const slots = new Map(walk.in(root).map((n, i) => [n, i])); // sideways position = inorder position
+    const visit = walk[order](root); // nodes in the order they are visited
+    const depths = new Map(); const edges = []; // how deep each node is, and the parent-child lines
+    (function place(node, depth) {
+      depths.set(node, depth);
+      for (const child of [node.l, node.r]) if (child) { edges.push([node, child]); place(child, depth + 1); }
+    })(root, 0);
+    const px = (n) => 36 + slots.get(n) * 52; // x position of a node
+    const py = (n) => 32 + depths.get(n) * 64; // y position of a node
+    const width = 72 + (slots.size - 1) * 52, height = Math.max(...depths.values()) * 64 + 72;
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#fff">` +
+      edges.map(([a, b]) => `<line x1="${px(a)}" y1="${py(a)}" x2="${px(b)}" y2="${py(b)}" stroke="#9fb1bb" stroke-width="2"/>`).join('') +
+      [...slots.keys()].map((n) => `<circle cx="${px(n)}" cy="${py(n)}" r="18" fill="${isOperator(n.v) ? '#fde8c8' : '#e3f3f4'}" stroke="#0e7c86" stroke-width="2"/>` +
+        `<text x="${px(n)}" y="${py(n) + 5}" text-anchor="middle" font-size="14" fill="#14262f">${esc(n.v)}</text>` +
+        `<circle cx="${px(n) + 14}" cy="${py(n) - 14}" r="9" fill="#0e7c86"/>` +
+        `<text x="${px(n) + 14}" y="${py(n) - 10}" text-anchor="middle" font-size="11" fill="#fff">${visit.indexOf(n) + 1}</text>`).join('') + '</svg>';
+  }
+ 
+  async function build(kind) { // runs when you press Build or Enter in the box called `kind`
+    treeError.textContent = ''; // clear the old error
+    try {
+      const expr = toInfix(kind, kinds[kind].input.value); // convert what was typed to infix
+      const response = await fetch('/api/expression', { // ask the server to build the tree
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expr })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'That expression is not valid.');
+      for (const [name, info] of Object.entries(kinds)) { // update all three sections
+        if (name !== kind) info.input.value = data[name]; // fill the OTHER two boxes (keep what you typed)
+        info.draw.innerHTML = drawTree(data.tree, info.order); // redraw the tree with this order's numbers
+      }
+    } catch (error) {
+      treeError.textContent = error.message; // show the problem
+    }
+  }
+ 
+  for (const [name, info] of Object.entries(kinds)) { // wire up each box
+    info.input.addEventListener('keydown', (event) => { if (event.key === 'Enter') build(name); }); // Enter builds
+  }
+  document.querySelectorAll('[data-build]').forEach((button) => { // wire up each Build button
+    button.addEventListener('click', () => build(button.dataset.build));
   });
+ 
+  kinds.infix.input.value = 'A+B/D-E'; // starting example
+  build('infix');
 }
+ 

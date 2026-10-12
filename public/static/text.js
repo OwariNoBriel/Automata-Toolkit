@@ -1,71 +1,148 @@
-const textSection = document.getElementById('page-text');            // grab the Text Operations page (<section id="page-text">)
-if (textSection) {                                                    // only run this code if that page exists in the HTML
-  const esc = (value) => String(value)                                // function that makes text safe to put inside HTML
-    .replace(/&/g, '&amp;')                                           // & becomes &amp; (must be done first)
-    .replace(/</g, '&lt;')                                            // < becomes &lt; so it isn't read as a tag
-    .replace(/>/g, '&gt;')                                            // > becomes &gt;
-    .replace(/"/g, '&quot;');                                         // " becomes &quot;
+(() => {
+  if (window.__textToolLoaded) return;      // avoid double listeners
+  window.__textToolLoaded = true;
 
-  function show(answer) {                                             // turns true/false into friendly words
-    if (answer === true) return 'Yes';                                // true -> "Yes"
-    if (answer === false) return 'No';                                // false -> "No"
-    return answer;                                                    // anything else is shown as it is
-  }
+  const $ = id => document.getElementById(id);
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const dash = s => (s === '' ? '—' : s);
 
-  function table(rows) {                                              // builds an HTML table from [label, answer] pairs
-    let html = '<table>';                                             // start the table
-    for (const [label, answer] of rows) {                             // loop over each pair, splitting it into label and answer
-      html += `<tr><th>${esc(label)}</th><td>${esc(show(answer))}</td></tr>`; // add one row: label on the left, answer on the right
+  /* ---------- string pipeline ---------- */
+  const OPS = {
+    concat:  { label: 'Concat (+ B)', fn: (v, b) => v + b },
+    reverse: { label: 'Reverse',      fn: v => [...v].reverse().join('') },
+    upper:   { label: 'Uppercase',    fn: v => v.toUpperCase() },
+    lower:   { label: 'Lowercase',    fn: v => v.toLowerCase() },
+  };
+  let pipeline = [];
+
+  function render() {
+    if (!$('textA') || !$('steps')) return;
+    const b = $('textB').value;
+    let v = $('textA').value;
+    const rows = [{ label: 'Start (Text A)', value: v }];
+    for (const key of pipeline) {
+      v = OPS[key].fn(v, b);
+      rows.push({ label: OPS[key].label, value: v });
     }
-    return html + '</table>';                                         // close the table and send it back
+    $('steps').innerHTML =
+      '<tr><th>Step</th><th>Value</th><th>Length</th></tr>' +
+      rows.map(r => `<tr><td>${r.label}</td><td>${esc(dash(r.value))}</td><td>${[...r.value].length}</td></tr>`).join('');
+
+    const chars = [...v];
+    $('outCurrent').textContent  = dash(v);
+    $('outLength').textContent   = chars.length;
+    $('outPrefixes').textContent = dash(chars.map((_, i) => chars.slice(0, i + 1).join('')).join(', '));
+    $('outSuffixes').textContent = dash(chars.map((_, i) => chars.slice(i).join('')).join(', '));
+    $('outPal').textContent      = v === '' ? '—' : (v === [...chars].reverse().join('') ? 'Yes' : 'No');
   }
 
-  const textInputs = {                                                // one object holding every element this page uses
-    a: document.getElementById('text-input-a'),                       // input box for Text A
-    b: document.getElementById('text-input-b'),                       // input box for Text B
-    analyze: document.getElementById('text-analyze'),                 // the Analyze button
-    combined: document.getElementById('text-output-combined'),        // box for results that use both texts (A + B)
-    results: document.getElementById('text-results-grid') || document.getElementById('results-grid'), // the two-column grid; tries the first id, falls back to the second
-    outputA: document.getElementById('text-output-a'),                // where Text A's results go
-    outputB: document.getElementById('text-output-b')                 // where Text B's results go
+  /* ---------- notation converter ---------- */
+  const PREC = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+  const RIGHT = { '^': true };
+  const isOp = t => t in PREC;
+  const tokenize = s => s.match(/[A-Za-z0-9.]+|[-+*/^()]/g) || [];
+
+  function fromPostfix(tokens) {
+    const st = [];
+    for (const x of tokens) {
+      if (isOp(x)) {
+        const r = st.pop(), l = st.pop();
+        if (!l || !r) throw Error('Invalid postfix expression');
+        st.push({ v: x, l, r });
+      } else st.push({ v: x });
+    }
+    if (st.length !== 1) throw Error('Invalid postfix expression');
+    return st[0];
+  }
+  function fromPrefix(tokens) {
+    const st = [];
+    for (const x of [...tokens].reverse()) {
+      if (isOp(x)) {
+        const l = st.pop(), r = st.pop();
+        if (!l || !r) throw Error('Invalid prefix expression');
+        st.push({ v: x, l, r });
+      } else st.push({ v: x });
+    }
+    if (st.length !== 1) throw Error('Invalid prefix expression');
+    return st[0];
+  }
+  function fromInfix(tokens) {
+    const out = [], ops = [];
+    for (const x of tokens) {
+      if (isOp(x)) {
+        while (ops.length) {
+          const top = ops[ops.length - 1];
+          if (isOp(top) && (PREC[top] > PREC[x] || (PREC[top] === PREC[x] && !RIGHT[x]))) out.push(ops.pop());
+          else break;
+        }
+        ops.push(x);
+      } else if (x === '(') ops.push(x);
+      else if (x === ')') {
+        while (ops.length && ops[ops.length - 1] !== '(') out.push(ops.pop());
+        if (!ops.length) throw Error('Mismatched parentheses');
+        ops.pop();
+      } else out.push(x);
+    }
+    while (ops.length) {
+      const o = ops.pop();
+      if (o === '(') throw Error('Mismatched parentheses');
+      out.push(o);
+    }
+    return fromPostfix(out);
+  }
+  function toInfix(n) {
+    if (!n.l) return n.v;
+    const p = PREC[n.v];
+    const wrap = (c, isRight) => {
+      const s = toInfix(c);
+      if (!c.l) return s;
+      const q = PREC[c.v];
+      return (q < p || (q === p && isRight !== !!RIGHT[n.v])) ? `(${s})` : s;
+    };
+    return `${wrap(n.l, false)} ${n.v} ${wrap(n.r, true)}`;
+  }
+  const toPrefix  = n => n.l ? `${n.v} ${toPrefix(n.l)} ${toPrefix(n.r)}` : n.v;
+  const toPostfix = n => n.l ? `${toPostfix(n.l)} ${toPostfix(n.r)} ${n.v}` : n.v;
+
+  const MODES = {
+    'post-in':  { parse: fromPostfix, emit: toInfix,   hint: 'a b + c *' },
+    'in-pre':   { parse: fromInfix,   emit: toPrefix,  hint: '(a + b) * c' },
+    'pre-post': { parse: fromPrefix,  emit: toPostfix, hint: '* + a b c' },
   };
 
-  async function analyzeText() {                                      // runs when the user clicks Analyze or presses Enter (async = it waits for the server)
-    const a = textInputs.a ? textInputs.a.value : '';                 // read Text A, or '' if the box doesn't exist
-    const b = textInputs.b ? textInputs.b.value : '';                 // read Text B, or '' if the box doesn't exist
-    if (!a && !b) {                                                   // if both boxes are empty...
-      if (textInputs.combined) textInputs.combined.style.display = 'none'; // ...hide the combined results
-      if (textInputs.results) textInputs.results.style.display = 'none';   // ...hide the A/B grid
-      return;                                                         // ...and stop, nothing to analyze
+  function convert() {
+    if (!$('convMode')) return;
+    const m = MODES[$('convMode').value];
+    $('convIn').placeholder = m.hint;
+    $('convErr').textContent = '';
+    try {
+      const tokens = tokenize($('convIn').value);
+      $('convOut').textContent = tokens.length ? m.emit(m.parse(tokens)) : '—';
+    } catch (e) {
+      $('convOut').textContent = '—';
+      $('convErr').textContent = e.message;
     }
-    const response = await fetch('/api/text', {                       // send the texts to the Flask route /api/text and wait for the reply
-      method: 'POST',                                                 // POST = we are sending data
-      headers: { 'Content-Type': 'application/json' },                // tell the server the data is JSON
-      body: JSON.stringify({ a, b })                                  // turn {a, b} into a JSON string to send
-    });
-    const data = await response.json();                               // read the server's reply as JSON
-    if (data.empty) {                                                 // the server says there was nothing to analyze
-      if (textInputs.combined) textInputs.combined.style.display = 'none'; // hide the combined results
-      if (textInputs.results) textInputs.results.style.display = 'none';   // hide the A/B grid
-      return;                                                         // stop here
-    }
-    if (textInputs.combined) {                                        // if the combined box exists...
-      textInputs.combined.style.display = 'block';                    // ...make it visible
-      textInputs.combined.innerHTML = table(data.combined);           // ...and fill it with the combined results table
-    }
-    if (textInputs.results) {                                         // if the A/B grid exists...
-      textInputs.results.style.display = 'grid';                      // ...show it as a grid (two columns)
-    }
-    if (textInputs.outputA) textInputs.outputA.innerHTML = table(data.a); // fill the Text A column with its results table
-    if (textInputs.outputB) textInputs.outputB.innerHTML = table(data.b); // fill the Text B column with its results table
   }
 
-  if (textInputs.analyze) textInputs.analyze.addEventListener('click', analyzeText); // clicking Analyze runs analyzeText
-  [textInputs.a, textInputs.b].forEach((input) => {                   // do the next part for both input boxes
-    if (input) {                                                      // skip it if the box doesn't exist
-      input.addEventListener('keydown', (event) => {                  // listen for any key pressed inside the box
-        if (event.key === 'Enter') analyzeText();                     // pressing Enter also runs analyzeText
-      });
-    }
+  /* ---------- events (delegated, so load order doesn't matter) ---------- */
+  document.addEventListener('click', e => {
+    const opBtn = e.target.closest('#ops [data-op]');
+    if (opBtn) { pipeline.push(opBtn.dataset.op); render(); return; }
+    if (e.target.closest('#undo'))  { pipeline.pop(); render(); }
+    if (e.target.closest('#reset')) { pipeline = []; render(); }
   });
-}
+  document.addEventListener('input', e => {
+    if (e.target.id === 'textA' || e.target.id === 'textB') render();
+    if (e.target.id === 'convIn') convert();
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id === 'convMode') convert();
+  });
+
+  // draw as soon as the template shows up in the page
+  new MutationObserver(() => {
+    const a = $('textA');
+    if (a && !a.dataset.ready) { a.dataset.ready = '1'; render(); convert(); }
+  }).observe(document.body, { childList: true, subtree: true });
+  render(); convert();
+})();
