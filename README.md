@@ -11,8 +11,8 @@ A modular web app for learning binary trees, string operations, sets, and regula
   - Sets
   - Regular Operations
 - Split the interface into reusable template sections in `templates/toolkit/`
-- Split JavaScript behavior by tab into independent files in `static/`
-- Kept the shared app shell and styling in `static/app.js` and `static/style.css`
+- Split JavaScript behavior by tab into independent files in `public/static/`
+- Kept the shared app shell and styling in `public/static/app.js` and `public/static/style.css`
 - Preserved the sidebar navigation and broad app layout while separating each tool into its own page state
 
 ### Independent tab logic
@@ -44,7 +44,7 @@ A modular web app for learning binary trees, string operations, sets, and regula
   - `index.html` – shell layout
   - `sidebar.html` – sidebar navigation
   - `toolkit/` – individual page templates for each tool
-- `static/`
+- `public/static/`
   - `app.js` – page switching and shared shell behavior
   - `tree.js` – expression tree tab logic
   - `text.js` – text tab logic
@@ -52,6 +52,14 @@ A modular web app for learning binary trees, string operations, sets, and regula
   - `regex.js` – Regular Operations tab logic
   - `style.css` – dark responsive styling
 - `tests/test_core.py` – project tests and regression checks
+
+## Deploying to Vercel
+
+Vercel detects the Flask app automatically (`app.py` exposes `app`), so no `vercel.json` is needed.
+
+- Static files live in `public/static/` because Vercel serves `public/**` from its CDN and ignores Flask's own static folder. Flask serves the same folder when running locally.
+- `requirements.txt` lists only what the deployed app needs. Install test tools locally with `py -m pip install -r requirements-dev.txt`.
+- Push to GitHub, then in Vercel choose **Add New Project**, import the repo and press **Deploy**. Leave the build settings empty.
 
 ## Features
 
@@ -86,7 +94,7 @@ Or with a normal virtual environment:
 
 ```bash
 python3 -m venv flask
-./flask/bin/pip install -r requirements.txt
+./flask/bin/pip install -r requirements-dev.txt
 ./flask/bin/python app.py
 ```
 

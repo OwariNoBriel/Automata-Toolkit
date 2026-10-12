@@ -3,7 +3,9 @@ from flask import Flask, jsonify, render_template, request
 
 from traversal_toolkit import expr_tree, regex_ops
 
-app = Flask(__name__)
+# Static files live in public/ because Vercel serves public/** from its CDN
+# (Flask's own static folder is ignored there). Locally Flask serves the same folder.
+app = Flask(__name__, static_folder="public/static", static_url_path="/static")
 expr_tree.register(app)
 
 

@@ -57,6 +57,14 @@ def test_empty_text_is_not_a_palindrome():
     assert dict(text_ops.string_ops("", "x"))["A is a palindrome"] is False
 
 
+def test_static_files_are_served_from_public_folder():
+    from app import app
+
+    client = app.test_client()
+    for name in ("app.js", "tree.js", "text.js", "set.js", "regex.js", "style.css"):
+        assert client.get(f"/static/{name}").status_code == 200, name
+
+
 def test_index_renders_sidebar_and_tabs():
     from pathlib import Path
 
@@ -67,9 +75,9 @@ def test_index_renders_sidebar_and_tabs():
     assert (root / "templates" / "toolkit" / "tree.html").exists()
     assert (root / "templates" / "toolkit" / "text.html").exists()
     assert (root / "templates" / "toolkit" / "set.html").exists()
-    assert (root / "static" / "tree.js").exists()
-    assert (root / "static" / "text.js").exists()
-    assert (root / "static" / "set.js").exists()
+    assert (root / "public" / "static" / "tree.js").exists()
+    assert (root / "public" / "static" / "text.js").exists()
+    assert (root / "public" / "static" / "set.js").exists()
 
     client = app.test_client()
     response = client.get("/")

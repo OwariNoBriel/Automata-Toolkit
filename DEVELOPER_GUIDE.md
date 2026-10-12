@@ -14,10 +14,10 @@ This project is organized so each feature tab has its own UI, its own frontend l
 - `templates/sidebar.html`  
   The sidebar navigation items. This is where new tab names are defined.
 
-- `static/app.js`  
+- `public/static/app.js`  
   Shared page behavior such as sidebar toggle and tab switching. It does not contain per-tool logic.
 
-- `static/style.css`  
+- `public/static/style.css`  
   Shared styling for the overall app theme, layout, sidebar, cards, buttons, inputs, and common classes.
 
 ### Tool-specific files
@@ -28,16 +28,16 @@ This project is organized so each feature tab has its own UI, its own frontend l
   - `set.html`
   - `regex.html`
 
-- `static/tree.js`  
+- `public/static/tree.js`  
   Logic for the tree tab only.
 
-- `static/text.js`  
+- `public/static/text.js`  
   Logic for the text operations tab only.
 
-- `static/set.js`  
+- `public/static/set.js`  
   Logic for the set operations tab only.
 
-- `static/regex.js`  
+- `public/static/regex.js`  
   Logic for the Regular Operations tab only.
 
 - `traversal_toolkit/`  
@@ -57,10 +57,10 @@ Each tab follows this pattern:
 1. Add a sidebar button in `templates/sidebar.html`
 2. Add a matching section in the main page layout (usually in `templates/index.html` or a shared tab block)
 3. Create a tab-specific HTML file under `templates/toolkit/`
-4. Add a tab-specific JavaScript file in `static/`
+4. Add a tab-specific JavaScript file in `public/static/`
 5. Add the backend logic in the matching Python module inside `traversal_toolkit/`
 6. Connect the frontend JS to the Flask API route in `app.py`
-7. Add the tab-specific CSS only if needed in `static/style.css`
+7. Add the tab-specific CSS only if needed in `public/static/style.css`
 
 ---
 
@@ -108,7 +108,7 @@ Example:
 ```
 
 ### 4) Create the JavaScript file
-Create `static/graph.js` and attach event listeners for the new controls.
+Create `public/static/graph.js` and attach event listeners for the new controls.
 
 Example:
 
@@ -175,8 +175,8 @@ def analyze():
 
 This is the clean separation that keeps Python logic in the toolkit folder and frontend logic in the static folder.
 
-### 6) Add styles in `static/style.css`
-If the new tab needs specific classes, add them to `static/style.css`.
+### 6) Add styles in `public/static/style.css`
+If the new tab needs specific classes, add them to `public/static/style.css`.
 
 Examples:
 
@@ -198,16 +198,16 @@ Keep general app styles in the shared CSS file, and only add tab-specific stylin
 
 ---
 
-## What the JavaScript files in `static/` do
+## What the JavaScript files in `public/static/` do
 
-The files in `static/` are frontend handlers. They do not implement the actual algorithms. Their job is to:
+The files in `public/static/` are frontend handlers. They do not implement the actual algorithms. Their job is to:
 
 - read the user input from the DOM
 - validate it
 - send JSON to the Flask API
 - render the response back into the page
 
-### Example: `static/regex.js`
+### Example: `public/static/regex.js`
 `regex.js` does this:
 
 - reads the expression and the max-length slider
@@ -217,7 +217,7 @@ The files in `static/` are frontend handlers. They do not implement the actual a
 
 It is only responsible for the Regular Operations tab UI and request flow.
 
-### Example: `static/tree.js`
+### Example: `public/static/tree.js`
 `tree.js` does the same for tree operations:
 
 - reads the expression input
@@ -253,7 +253,7 @@ The files under `traversal_toolkit/` contain the actual algorithmic and data-pro
 - builds an NFA and tests whether a string matches
 
 In short:
-- `static/*.js` = browser-side UI + API calls
+- `public/static/*.js` = browser-side UI + API calls
 - `traversal_toolkit/*.py` = actual logic and computation
 - `app.py` = bridge between them
 
@@ -265,7 +265,7 @@ In short:
 2. Do not share DOM IDs across tabs.
 3. Do not mix UI logic and algorithm logic in the same file.
 4. Put business logic in `traversal_toolkit/`.
-5. Keep the page shell in `templates/` and shared styling in `static/style.css`.
+5. Keep the page shell in `templates/` and shared styling in `public/static/style.css`.
 6. Keep request/response flow in `app.py`.
 7. Use clear names like `graph.js`, `graph.py`, and `graph.html` so the structure stays predictable.
 
@@ -278,10 +278,10 @@ When you add a new tab, check these boxes:
 - [ ] Sidebar item added
 - [ ] Tab section added to template
 - [ ] New HTML file created if needed
-- [ ] New JS file created in `static/`
+- [ ] New JS file created in `public/static/`
 - [ ] New Python module created in `traversal_toolkit/`
 - [ ] Endpoint added in `app.py`
-- [ ] Style added in `static/style.css` if needed
+- [ ] Style added in `public/static/style.css` if needed
 - [ ] Feature tested and verified
 
 ---
