@@ -11,8 +11,8 @@ A modular web app for learning binary trees, string operations, sets, and regula
   - Sets
   - Regular Operations
 - Split the interface into reusable template sections in `templates/toolkit/`
-- Split JavaScript behavior by tab into independent files in `static/`
-- Kept the shared app shell and styling in `static/app.js` and `static/style.css`
+- Split JavaScript behavior by tab into independent files in `public/static/`
+- Kept the shared app shell and styling in `public/static/app.js` and `public/static/style.css`
 - Preserved the sidebar navigation and broad app layout while separating each tool into its own page state
 
 ### Independent tab logic
@@ -33,18 +33,18 @@ A modular web app for learning binary trees, string operations, sets, and regula
 
 ## Project structure
 
-- `app.py` – Flask entry point and `/api/expression` and `/api/regex` routes
+- `app.py` – Flask entry point and `/api/expression`, `/api/text`, `/api/sets` and `/api/regex` routes
 - `traversal_toolkit/` – toolkit logic
-  - `tree.py` – binary tree building and traversal logic
-  - `text_ops.py` – string operations
-  - `string_extra.py` – extra string utilities
-  - `set_ops.py` – set operations
+  - `basics.py` – tiny hand-written helpers (length, contains, join, merge sort)
+  - `expr_tree.py` – expression tokenizing, shunting-yard, tree building and traversals
+  - `text_ops.py` – text operations, done character by character
+  - `set_ops.py` – set operations, power set and Cartesian product, done with plain lists and loops
   - `regex_ops.py` – regular expression parsing and string generation
 - `templates/`
   - `index.html` – shell layout
   - `sidebar.html` – sidebar navigation
   - `toolkit/` – individual page templates for each tool
-- `static/`
+- `public/static/`
   - `app.js` – page switching and shared shell behavior
   - `tree.js` – expression tree tab logic
   - `text.js` – text tab logic
@@ -52,6 +52,21 @@ A modular web app for learning binary trees, string operations, sets, and regula
   - `regex.js` – Regular Operations tab logic
   - `style.css` – dark responsive styling
 - `tests/test_core.py` – project tests and regression checks
+
+## Deploying to Vercel
+
+Vercel detects the Flask app automatically (`app.py` exposes `app`), so no `vercel.json` is needed.
+
+- Static files live in `public/static/` because Vercel serves `public/**` from its CDN and ignores Flask's own static folder. Flask serves the same folder when running locally.
+- `requirements.txt` lists only what the deployed app needs. Install test tools locally with `py -m pip install -r requirements-dev.txt`.
+- Push to GitHub, then in Vercel choose **Add New Project**, import the repo and press **Deploy**. Leave the build settings empty.
+
+## Hand-written logic
+
+The lesson code in `traversal_toolkit/` avoids built-in shortcuts on purpose, so every algorithm can be explained line by line:
+no `set` operators (`|`, `&`, `-`, `^`), no `[::-1]`, `.upper()`, `.startswith()`, `sorted()` or `re`. Every line has an inline comment.
+The tests compare each hand-written function against the built-in version on random inputs to prove it is correct.
+The JavaScript files only send input to Python and draw what comes back.
 
 ## Features
 
@@ -86,7 +101,7 @@ Or with a normal virtual environment:
 
 ```bash
 python3 -m venv flask
-./flask/bin/pip install -r requirements.txt
+./flask/bin/pip install -r requirements-dev.txt
 ./flask/bin/python app.py
 ```
 
