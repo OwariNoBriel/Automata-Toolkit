@@ -1,81 +1,92 @@
-const setSection = document.getElementById('page-set');
-if (setSection) {
-  const esc = (value) => String(value).replace(/[&<>\"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\\': '&#92;' }[char]));
-  const show = (value) => typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value;
-  const table = (rows) => '<table>' + rows.map(([key, value]) => `<tr><th>${esc(key)}</th><td>${esc(show(value))}</td></tr>`).join('') + '</table>';
+// Sets tab. Python does every set operation; this file only sends the sets and shows the answers.
+const setSection = document.getElementById('page-set'); // the whole Sets page
+if (setSection) { // only run when this page exists in the HTML
+  const esc = (value) => String(value) // makes text safe to put inside HTML
+    .replace(/&/g, '&amp;') // & becomes &amp;
+    .replace(/</g, '&lt;') // < becomes &lt;
+    .replace(/>/g, '&gt;') // > becomes &gt;
+    .replace(/"/g, '&quot;'); // " becomes &quot;
 
-  const setInputs = {
-    a: document.getElementById('set-a'),
-    b: document.getElementById('set-b'),
-    run: document.getElementById('set-run'),
-    output: document.getElementById('set-output')
+  function show(answer) { // true/false answers are shown as Yes/No
+    if (answer === true) return 'Yes'; // true becomes Yes
+    if (answer === false) return 'No'; // false becomes No
+    return answer; // everything else is shown as it is
+  }
+
+  function table(rows) { // turn [label, answer] rows into an HTML table
+    let html = '<table>'; // start the table
+    for (const [label, answer] of rows) { // one table row per pair
+      html += `<tr><th>${esc(label)}</th><td>${esc(show(answer))}</td></tr>`; // a label cell and an answer cell
+    }
+    return html + '</table>'; // close the table
+  }
+
+  const setInputs = { // the page elements we talk to
+    a: document.getElementById('set-a'), // Set A box
+    b: document.getElementById('set-b'), // Set B box
+    run: document.getElementById('set-run'), // the Run button
+    output: document.getElementById('set-output') // where results appear
   };
 
-  const POWER_LIMIT = 10; // 2^10 = 1024 subsets is the most we list on screen
-  const PRODUCT_LIMIT = 200; // most ordered pairs we list on screen
-
-  const parse = (text) => new Set(text.split(/[\s,]+/).filter(Boolean));
-  const sorted = (values) => Array.from(values).sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
-  const format = (values) => '{' + sorted(values).join(', ') + '}';
-
-  // Every subset of the set, smallest first. The empty set comes first.
-  function powerSet(set) {
-    const items = sorted(set);
-    const subsets = [];
-    for (let mask = 0; mask < 2 ** items.length; mask++) {
-      subsets.push(items.filter((_, index) => mask & (1 << index)));
+  function productCard(product) { // one Cartesian product card
+    const plural = product.count === 1 ? '' : 's'; // "1 pair" but "4 pairs"
+    let html = `<div class="set-card"><h3>Cartesian product ${product.name} <small>${product.count} pair${plural}</small></h3>`; // card and title
+    if (product.pairs === null) { // Python decided there are too many pairs to list
+      html += `<p class="hint">Too many pairs to list. The limit is ${product.limit}.</p>`; // say so
+    } else if (product.pairs.length === 0) { // an empty set gives no pairs
+      html += '<div class="chip-list"><span>∅</span></div>'; // show the empty-set sign
+    } else { // there are pairs to show
+      html += '<div class="chip-list">'; // start the row of chips
+      for (const [x, y] of product.pairs) { // one chip per ordered pair
+        html += `<span>(${esc(x)}, ${esc(y)})</span>`; // written as (x, y)
+      }
+      html += '</div>'; // end the row of chips
     }
-    return subsets.sort((x, y) => x.length - y.length);
+    return html + '</div>'; // close the card
   }
 
-  function powerCard(label, set) {
-    const n = set.size;
-    const total = n <= 30 ? 2 ** n : null;
-    const count = total === null ? `2<sup>${n}</sup>` : `${total} subset${total === 1 ? '' : 's'}`;
-    const title = `<h3>Power set P(${label}) <small>${count}</small></h3>`;
-    if (n > POWER_LIMIT) {
-      return `<div class="set-card">${title}<p class="hint">Too many subsets to list. The limit is ${POWER_LIMIT} elements.</p></div>`;
+  function powerCard(power) { // one power set card
+    let count = `2<sup>${power.n}</sup>`; // a huge count is written as 2 to the power n
+    if (power.count !== null) { // Python sent a normal number
+      count = `${power.count} subset${power.count === 1 ? '' : 's'}`; // "1 subset" but "8 subsets"
     }
-    const chips = powerSet(set).map((subset) => `<span>${subset.length ? '{' + esc(subset.join(', ')) + '}' : '∅'}</span>`).join('');
-    return `<div class="set-card">${title}<div class="power-set">${chips}</div></div>`;
+    let html = `<div class="set-card"><h3>Power set P(${power.name}) <small>${count}</small></h3>`; // card and title
+    if (power.subsets === null) { // Python decided there are too many subsets to list
+      html += `<p class="hint">Too many subsets to list. The limit is ${power.limit} elements.</p>`; // say so
+    } else { // there are subsets to show
+      html += '<div class="power-set">'; // start the row of chips
+      for (const subset of power.subsets) { // one chip per subset
+        const label = subset.length === 0 ? '∅' : '{' + esc(subset.join(', ')) + '}'; // the empty set is written ∅
+        html += `<span>${label}</span>`; // the chip
+      }
+      html += '</div>'; // end the row of chips
+    }
+    return html + '</div>'; // close the card
   }
 
-  // Ordered pairs (x, y) with x from the left set and y from the right set.
-  function productCard(leftName, rightName, left, right) {
-    const total = left.size * right.size;
-    const title = `<h3>Cartesian product ${leftName} × ${rightName} <small>${total} pair${total === 1 ? '' : 's'}</small></h3>`;
-    if (total > PRODUCT_LIMIT) {
-      return `<div class="set-card">${title}<p class="hint">Too many pairs to list. The limit is ${PRODUCT_LIMIT}.</p></div>`;
-    }
-    const rightItems = sorted(right);
-    const pairs = sorted(left).flatMap((x) => rightItems.map((y) => `<span>(${esc(x)}, ${esc(y)})</span>`));
-    return `<div class="set-card">${title}<div class="chip-list">${pairs.join('') || '<span>∅</span>'}</div></div>`;
-  }
+  async function analyzeSets() { // send the sets to Python and show the result
+    const response = await fetch('/api/sets', { // ask the server
+      method: 'POST', // we are sending data
+      headers: { 'Content-Type': 'application/json' }, // the data is JSON
+      body: JSON.stringify({ a: setInputs.a.value, b: setInputs.b.value }) // the two typed sets
+    });
+    const data = await response.json(); // read the answer
 
-  function analyzeSets() {
-    const A = parse(setInputs.a.value);
-    const B = parse(setInputs.b.value);
-
-    if (!A.size && !B.size) {
-      setInputs.output.innerHTML = '<p class="hint">Enter at least one set.</p>';
-      return;
+    if (data.empty) { // nothing was typed
+      setInputs.output.innerHTML = '<p class="hint">Enter at least one set.</p>'; // show a hint
+      return; // nothing more to show
     }
 
-    const operations = [
-      ['Set A', format(A)],
-      ['Set B', format(B)],
-      ['Union (A ∪ B)', format(new Set([...A, ...B]))],
-      ['Intersection (A ∩ B)', format(new Set([...A].filter((value) => B.has(value))))],
-      ['Difference (A − B)', format(new Set([...A].filter((value) => !B.has(value))))],
-      ['Difference (B − A)', format(new Set([...B].filter((value) => !A.has(value))))],
-      ['Symmetric difference (A Δ B)', format(new Set([...A, ...B].filter((value) => A.has(value) !== B.has(value))))],
-      ['|A| / |B|', `${A.size} / ${B.size}`]
-    ];
-
-    setInputs.output.innerHTML = table(operations) + productCard('A', 'B', A, B) + productCard('B', 'A', B, A) + powerCard('A', A) + powerCard('B', B);
+    let html = table(data.table); // the operation rows
+    for (const product of data.products) html += productCard(product); // A × B and B × A
+    for (const power of data.powers) html += powerCard(power); // P(A) and P(B)
+    setInputs.output.innerHTML = html; // put it all on the page
   }
 
-  setInputs.run.addEventListener('click', analyzeSets);
-  [setInputs.a, setInputs.b].forEach((input) =>
-    input.addEventListener('keydown', (event) => { if (event.key === 'Enter') analyzeSets(); }));
+  setInputs.run.addEventListener('click', analyzeSets); // run when the button is clicked
+  for (const input of [setInputs.a, setInputs.b]) { // both set boxes
+    input.addEventListener('keydown', (event) => { // when a key is pressed in one
+      if (event.key === 'Enter') analyzeSets(); // the Enter key also runs
+    });
+  }
 }

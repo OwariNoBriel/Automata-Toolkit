@@ -6,7 +6,7 @@ This project is organized so each feature tab has its own UI, its own frontend l
 
 ### Shared app shell
 - `app.py`  
-  Flask app entry point. Handles route rendering and the `/api/expression` and `/api/regex` endpoints.
+  Flask app entry point. Handles route rendering and the `/api/expression`, `/api/text`, `/api/sets` and `/api/regex` endpoints.
 
 - `templates/index.html`  
   Main page shell. This is the top-level layout that includes the sidebar and the tab sections.
@@ -42,9 +42,9 @@ This project is organized so each feature tab has its own UI, its own frontend l
 
 - `traversal_toolkit/`  
   Python business logic for the toolkit modules.
-  - `tree.py`
+  - `basics.py`
+  - `expr_tree.py`
   - `text_ops.py`
-  - `string_extra.py`
   - `set_ops.py`
   - `regex_ops.py`
 
@@ -232,25 +232,24 @@ This pattern is repeated for the text, set and regex tabs.
 
 The files under `traversal_toolkit/` contain the actual algorithmic and data-processing logic. These are the Python modules that handle the computational work.
 
-### `traversal_toolkit/tree.py`
-- builds binary trees from traversals
-- validates traversal consistency
-- computes preorder, inorder, postorder, height, structure, etc.
+### `traversal_toolkit/basics.py`
+- hand-written `length`, `contains`, `join`, `take` and `merge_sort`, used by the other modules
+
+### `traversal_toolkit/expr_tree.py`
+- tokenizes an expression, converts it to postfix (shunting-yard) and builds the tree
+- computes preorder, inorder and postorder, and numbers every node's visit for the drawing
 
 ### `traversal_toolkit/text_ops.py`
-- handles basic text operations
-- concatenation, reverse, counts, casing, comparisons, etc.
-
-### `traversal_toolkit/string_extra.py`
-- handles extra string-related utilities like prefix, suffix, reverse, palindrome checks
+- concatenation, reverse, uppercase, lowercase, first/last characters, unique characters, palindrome
+- custom prefix and suffix checks, all done character by character
 
 ### `traversal_toolkit/set_ops.py`
-- performs union, intersection, difference, symmetric difference, cardinality
+- union, intersection, difference, symmetric difference, subset, superset, disjoint, cardinality
+- power set and Cartesian product, using plain lists and loops
 
 ### `traversal_toolkit/regex_ops.py`
 - parses expressions with `*`, `+`, `|`, `( )` and concatenation
 - generates the strings an expression produces, shortest first
-- builds an NFA and tests whether a string matches
 
 In short:
 - `public/static/*.js` = browser-side UI + API calls

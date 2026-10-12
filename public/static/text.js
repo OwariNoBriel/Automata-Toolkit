@@ -1,73 +1,68 @@
-const textSection = document.getElementById('page-text');
-if (textSection) {
-  const esc = (value) => String(value).replace(/[&<>\"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\\': '&#92;' }[char]));
-  const show = (value) => typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value;
-  const table = (rows) => '<table>' + rows.map(([key, value]) => `<tr><th>${esc(key)}</th><td>${esc(show(value))}</td></tr>`).join('') + '</table>';
+// Text Operations tab. Python does every operation; this file only sends the texts and shows the answers.
+const textSection = document.getElementById('page-text'); // the whole Text Operations page
+if (textSection) { // only run when this page exists in the HTML
+  const esc = (value) => String(value) // makes text safe to put inside HTML
+    .replace(/&/g, '&amp;') // & becomes &amp;
+    .replace(/</g, '&lt;') // < becomes &lt;
+    .replace(/>/g, '&gt;') // > becomes &gt;
+    .replace(/"/g, '&quot;'); // " becomes &quot;
 
-  const textInputs = {
-    a: document.getElementById('text-input-a'),
-    b: document.getElementById('text-input-b'),
-    prefix: document.getElementById('text-prefix'),
-    suffix: document.getElementById('text-suffix'),
-    analyze: document.getElementById('text-analyze'),
-    combined: document.getElementById('text-output-combined'),
-    results: document.getElementById('text-results-grid'),
-    outputA: document.getElementById('text-output-a'),
-    outputB: document.getElementById('text-output-b')
+  function show(answer) { // true/false answers are shown as Yes/No
+    if (answer === true) return 'Yes'; // true becomes Yes
+    if (answer === false) return 'No'; // false becomes No
+    return answer; // everything else is shown as it is
+  }
+
+  function table(rows) { // turn [label, answer] rows into an HTML table
+    let html = '<table>'; // start the table
+    for (const [label, answer] of rows) { // one table row per pair
+      html += `<tr><th>${esc(label)}</th><td>${esc(show(answer))}</td></tr>`; // a label cell and an answer cell
+    }
+    return html + '</table>'; // close the table
+  }
+
+  const textInputs = { // the page elements we talk to
+    a: document.getElementById('text-input-a'), // Text A box
+    b: document.getElementById('text-input-b'), // Text B box
+    prefix: document.getElementById('text-prefix'), // custom prefix box
+    suffix: document.getElementById('text-suffix'), // custom suffix box
+    analyze: document.getElementById('text-analyze'), // the Analyze button
+    combined: document.getElementById('text-output-combined'), // card for rows about both texts
+    results: document.getElementById('text-results-grid'), // the two-column area
+    outputA: document.getElementById('text-output-a'), // column for Text A
+    outputB: document.getElementById('text-output-b') // column for Text B
   };
 
-  const reverse = (text) => Array.from(text).reverse().join('');
+  async function analyzeText() { // send the texts to Python and show the result
+    const response = await fetch('/api/text', { // ask the server
+      method: 'POST', // we are sending data
+      headers: { 'Content-Type': 'application/json' }, // the data is JSON
+      body: JSON.stringify({ // the four typed values
+        a: textInputs.a.value, // Text A
+        b: textInputs.b.value, // Text B
+        prefix: textInputs.prefix.value, // custom prefix
+        suffix: textInputs.suffix.value // custom suffix
+      })
+    });
+    const data = await response.json(); // read the answer
 
-  // Ignores spaces and letter case. Needs at least 2 characters, so one character is not a palindrome.
-  // Empty text is reported as "No text".
-  function palindromeAnswer(text) {
-    const clean = text.toLowerCase().replace(/\s+/g, '');
-    if (!clean) return 'No text';
-    return clean.length > 1 && clean === reverse(clean);
-  }
-
-  function operationsFor(text, prefix, suffix) {
-    const rows = [
-      ['Reversed', reverse(text)],
-      ['Is palindrome', palindromeAnswer(text)],
-      ['Uppercase', text.toUpperCase()],
-      ['Lowercase', text.toLowerCase()],
-      ['First 3 chars', text.slice(0, 3)],
-      ['Last 3 chars', text.slice(-3)],
-      ['Unique chars', new Set(text).size]
-    ];
-    if (prefix) rows.push([`Starts with "${prefix}"`, text.startsWith(prefix)]);
-    if (suffix) rows.push([`Ends with "${suffix}"`, text.endsWith(suffix)]);
-    return rows;
-  }
-
-  function analyzeText() {
-    const a = textInputs.a.value;
-    const b = textInputs.b.value;
-    const prefix = textInputs.prefix.value;
-    const suffix = textInputs.suffix.value;
-
-    if (!a && !b) {
-      textInputs.combined.style.display = 'none';
-      textInputs.results.style.display = 'none';
-      return;
+    if (data.empty) { // nothing was typed
+      textInputs.combined.style.display = 'none'; // hide the combined card
+      textInputs.results.style.display = 'none'; // hide the two columns
+      return; // nothing more to show
     }
 
-    const combined = [
-      ['Text A', a],
-      ['Text B', b],
-      ['Concatenation (A + B)', a + b],
-      ['Length A / B', `${a.length} / ${b.length}`]
-    ];
-
-    textInputs.combined.style.display = 'block';
-    textInputs.results.style.display = 'grid';
-    textInputs.combined.innerHTML = table(combined);
-    textInputs.outputA.innerHTML = table(operationsFor(a, prefix, suffix));
-    textInputs.outputB.innerHTML = table(operationsFor(b, prefix, suffix));
+    textInputs.combined.style.display = 'block'; // show the combined card
+    textInputs.results.style.display = 'grid'; // show the two columns
+    textInputs.combined.innerHTML = table(data.combined); // rows about both texts
+    textInputs.outputA.innerHTML = table(data.a); // rows for Text A
+    textInputs.outputB.innerHTML = table(data.b); // rows for Text B
   }
 
-  textInputs.analyze.addEventListener('click', analyzeText);
-  [textInputs.a, textInputs.b, textInputs.prefix, textInputs.suffix].forEach((input) =>
-    input.addEventListener('keydown', (event) => { if (event.key === 'Enter') analyzeText(); }));
+  textInputs.analyze.addEventListener('click', analyzeText); // analyze when the button is clicked
+  for (const input of [textInputs.a, textInputs.b, textInputs.prefix, textInputs.suffix]) { // every text box
+    input.addEventListener('keydown', (event) => { // when a key is pressed in it
+      if (event.key === 'Enter') analyzeText(); // the Enter key also analyzes
+    });
+  }
 }

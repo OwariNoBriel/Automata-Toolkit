@@ -33,12 +33,12 @@ A modular web app for learning binary trees, string operations, sets, and regula
 
 ## Project structure
 
-- `app.py` – Flask entry point and `/api/expression` and `/api/regex` routes
+- `app.py` – Flask entry point and `/api/expression`, `/api/text`, `/api/sets` and `/api/regex` routes
 - `traversal_toolkit/` – toolkit logic
-  - `tree.py` – binary tree building and traversal logic
-  - `text_ops.py` – string operations
-  - `string_extra.py` – extra string utilities
-  - `set_ops.py` – set operations
+  - `basics.py` – tiny hand-written helpers (length, contains, join, merge sort)
+  - `expr_tree.py` – expression tokenizing, shunting-yard, tree building and traversals
+  - `text_ops.py` – text operations, done character by character
+  - `set_ops.py` – set operations, power set and Cartesian product, done with plain lists and loops
   - `regex_ops.py` – regular expression parsing and string generation
 - `templates/`
   - `index.html` – shell layout
@@ -60,6 +60,13 @@ Vercel detects the Flask app automatically (`app.py` exposes `app`), so no `verc
 - Static files live in `public/static/` because Vercel serves `public/**` from its CDN and ignores Flask's own static folder. Flask serves the same folder when running locally.
 - `requirements.txt` lists only what the deployed app needs. Install test tools locally with `py -m pip install -r requirements-dev.txt`.
 - Push to GitHub, then in Vercel choose **Add New Project**, import the repo and press **Deploy**. Leave the build settings empty.
+
+## Hand-written logic
+
+The lesson code in `traversal_toolkit/` avoids built-in shortcuts on purpose, so every algorithm can be explained line by line:
+no `set` operators (`|`, `&`, `-`, `^`), no `[::-1]`, `.upper()`, `.startswith()`, `sorted()` or `re`. Every line has an inline comment.
+The tests compare each hand-written function against the built-in version on random inputs to prove it is correct.
+The JavaScript files only send input to Python and draw what comes back.
 
 ## Features
 
