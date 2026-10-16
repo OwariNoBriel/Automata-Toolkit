@@ -169,3 +169,8 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 .text-tool #set-steps td { font-family: ui-monospace, monospace; }
 .text-tool #set-steps table { width: 100%; border-collapse: collapse; }
 .text-tool .hint.small { margin-top: 10px; }
+.text-tool .card button:disabled {
+  background: #272a3c; color: #e6e8f2; border-color: #3a3e55; opacity: .4; cursor: not-allowed;
+}
+.text-tool .info-box .basis { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #3a3e55; color: #aab0c8; }
+.text-tool .info-box .basis b { color: #b9a2f0; }

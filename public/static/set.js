@@ -37,17 +37,13 @@
     diff:  { sym: '−', fn: (a, b) => new Set([...a].filter(x => !b.has(x))) },
     sym:   { sym: 'Δ', fn: (a, b) => new Set([...a, ...b].filter(x => a.has(x) !== b.has(x))) },
   };
-  const UNION = new Set(['u', '∪', '+']);
-  const INTER = new Set(['n', '∩', '*']);
-  const DIFF  = new Set(['-', '\\', '−', '–']);
-  const SYM   = new Set(['d', 'Δ', '△', '^']);
+  const DIFF = new Set(['-', '\\', '−', '–']);
 
-  function tokenize(src) {
+  function tokenize(src, sets) {
     const out = [];
     let i = 0;
     while (i < src.length) {
       const ch = src[i];
-      const c = ch.toLowerCase();
       if (/\s/.test(ch)) { i++; continue; }
       if (ch === '{') {                                   // a set written directly, e.g. {1, 2}
         const end = src.indexOf('}', i);
@@ -58,11 +54,15 @@
         continue;
       }
       if (ch === '(' || ch === ')') out.push({ t: ch });
-      else if (c === 'a' || c === 'b') out.push({ t: 'set', v: c, name: c.toUpperCase() });
-      else if (UNION.has(c) || UNION.has(ch)) out.push({ t: 'op', v: 'union' });
-      else if (INTER.has(c) || INTER.has(ch)) out.push({ t: 'op', v: 'inter' });
+      else if (ch === 'u' || ch === '∪' || ch === '+') out.push({ t: 'op', v: 'union' });
+      else if (ch === 'n' || ch === '∩' || ch === '*') out.push({ t: 'op', v: 'inter' });
       else if (DIFF.has(ch)) out.push({ t: 'op', v: 'diff' });
-      else if (SYM.has(c) || SYM.has(ch)) out.push({ t: 'op', v: 'sym' });
+      else if (ch === 'd' || ch === 'Δ' || ch === '△' || ch === '^') out.push({ t: 'op', v: 'sym' });
+      else if (/[a-z]/i.test(ch)) {                       // any other letter is a set name
+        const name = ch.toUpperCase();
+        if (!sets[name]) throw Error(`Set ${name} doesn't exist. Use "+ Add set" first.`);
+        out.push({ t: 'set', v: name, name });
+      }
       else throw Error(`Unknown symbol "${ch}"`);
       i++;
     }
@@ -71,7 +71,7 @@
 
   // all operators have equal precedence, evaluated left to right; records each step
   function evaluate(src, sets) {
-    const toks = tokenize(src);
+    const toks = tokenize(src, sets);
     const steps = [];
     let i = 0;
 
@@ -106,12 +106,15 @@
     return { set: result.s, steps };
   }
 
-  /* ---------- power set and Cartesian product ---------- */
+  /* ---------- power set and Cartesian product (always shown with the Result they come from) ---------- */
+  const basis = (...parts) => '<div class="basis">Based on ' + parts.join(' and ') + '</div>';
+
   function powerHtml(cur) {
     const items = sortItems([...cur]);
     const n = items.length;
     const count = n <= 30 ? String(2 ** n) : `2<sup>${n}</sup>`;
-    const head = `<b>P(Result)</b> — ${count} subset${n === 0 ? '' : 's'}`;
+    const head = basis(`<b>Result</b> = ${esc(show(cur))}`) +
+      `<b>P(Result)</b> — ${count} subset${n === 0 ? '' : 's'}`;
     if (n > POWER_LIMIT) return `${head}<br>Too many subsets to list. The limit is ${POWER_LIMIT} elements.`;
     let subsets = [[]];
     for (const x of items) subsets = subsets.concat(subsets.map(s => [...s, x]));
@@ -120,10 +123,10 @@
       subsets.map(s => `<span>${s.length ? '{' + esc(s.join(', ')) + '}' : '∅'}</span>`).join('') + '</div>';
   }
 
-  function productHtml(left, right, name) {
+  function productHtml(left, right, name, based) {
     const l = sortItems([...left]), r = sortItems([...right]);
     const total = l.length * r.length;
-    const head = `<b>${name}</b> — ${total} pair${total === 1 ? '' : 's'}`;
+    const head = basis(...based) + `<b>${name}</b> — ${total} pair${total === 1 ? '' : 's'}`;
     if (total > PRODUCT_LIMIT) return `${head}<br>Too many pairs to list. The limit is ${PRODUCT_LIMIT}.`;
     if (total === 0) return `${head}<div class="chip-list"><span>∅</span></div>`;
     const pairs = [];
@@ -131,19 +134,63 @@
     return head + '<div class="chip-list">' + pairs.join('') + '</div>';
   }
 
-  /* ---------- draw everything ---------- */
-  let activeList = null;  // 'power' | 'prodAB' | 'prodBA' | null
+  /* ---------- the sets themselves: A and B to start, up to F ---------- */
+  const MAX_SETS = 6;
+  const names = ['A', 'B'];
+  let activeList = null;  // 'power' | 'prodRX' | 'prodXR' | null
 
+  function getSets() {
+    const sets = {};
+    for (const n of names) sets[n] = parseSet($('set-' + n.toLowerCase()).value);
+    return sets;
+  }
+
+  function rebuildControls() {
+    $('set-name-btns').innerHTML = names.map(n => `<button data-ins="${n}">${n}</button>`).join('');
+    const sel = $('set-pair');
+    const keep = names.includes(sel.value) ? sel.value : 'B';
+    sel.innerHTML = names.map(n => `<option value="${n}">Set ${n}</option>`).join('');
+    sel.value = keep;
+    $('set-add').disabled = names.length >= MAX_SETS;
+    $('set-remove').disabled = names.length <= 2;
+  }
+
+  function addSet() {
+    if (names.length >= MAX_SETS) return;
+    const n = 'ABCDEF'[names.length];
+    const id = 'set-' + n.toLowerCase();
+    const field = document.createElement('div');
+    field.className = 'field';
+    field.id = id + '-field';
+    field.innerHTML = `<label for="${id}">Set ${n}</label>` +
+      `<div class="brace-input"><span>{</span><input id="${id}" class="set-in" placeholder="e.g. 5, 6" autocomplete="off"><span>}</span></div>`;
+    $('set-fields').appendChild(field);
+    names.push(n);
+    rebuildControls();
+    render();
+    $(id).focus();
+  }
+
+  function removeSet() {
+    if (names.length <= 2) return;
+    const n = names.pop();
+    const field = $('set-' + n.toLowerCase() + '-field');
+    if (field) field.remove();
+    rebuildControls();
+    render();
+  }
+
+  /* ---------- draw everything ---------- */
   function render() {
     if (!$('set-a') || !$('set-expr')) return;
-    const a = parseSet($('set-a').value);
-    const b = parseSet($('set-b').value);
+    const sets = getSets();
+    const a = sets.A, b = sets.B;
     const src = $('set-expr').value.trim();
 
     // the expression
     let result = null, steps = [], err = '';
     if (src) {
-      try { ({ set: result, steps } = evaluate(src, { a, b })); }
+      try { ({ set: result, steps } = evaluate(src, sets)); }
       catch (e) { err = e.message; }
     }
     $('set-err').textContent = err;
@@ -156,17 +203,25 @@
 
     $('set-cur').textContent   = result ? show(result) : '—';
     $('set-size').textContent  = result ? result.size : '—';
-    $('set-sizes').textContent = `${a.size} / ${b.size}`;
+    $('set-sizes').textContent = names.map(n => `|${n}| = ${sets[n].size}`).join(',  ');
     $('set-sub').textContent   = yn([...a].every(x => b.has(x)));
     $('set-sup').textContent   = yn([...b].every(x => a.has(x)));
     $('set-disj').textContent  = yn([...a].every(x => !b.has(x)));
 
+    // power set / product buttons, always based on the Result
+    const other = $('set-pair').value || 'B';
+    $('set-prod-rx').textContent = `Result × ${other}`;
+    $('set-prod-xr').textContent = `${other} × Result`;
     document.querySelectorAll('#set-lists [data-list]').forEach(btn =>
       btn.setAttribute('aria-pressed', String(btn.dataset.list === activeList)));
     const box = $('set-info');
-    if (activeList === 'power')       box.innerHTML = result ? powerHtml(result) : '<b>P(Result)</b> — build an expression first.';
-    else if (activeList === 'prodAB') box.innerHTML = productHtml(a, b, 'A × B');
-    else if (activeList === 'prodBA') box.innerHTML = productHtml(b, a, 'B × A');
+    const resultPart = result ? `<b>Result</b> = ${esc(show(result))}` : '';
+    const otherPart = `<b>${other}</b> = ${esc(show(sets[other] || new Set()))}`;
+    if (!activeList)                  box.innerHTML = '';
+    else if (!result)                 box.innerHTML = 'Build an expression first. The Result is what these are based on.';
+    else if (activeList === 'power')  box.innerHTML = powerHtml(result);
+    else if (activeList === 'prodRX') box.innerHTML = productHtml(result, sets[other], `Result × ${other}`, [resultPart, otherPart]);
+    else if (activeList === 'prodXR') box.innerHTML = productHtml(sets[other], result, `${other} × Result`, [otherPart, resultPart]);
     box.hidden = !activeList;
   }
 
@@ -205,6 +260,8 @@
       if (act.dataset.act === 'clear') { $('set-expr').value = ''; $('set-expr').focus(); render(); }
       return;
     }
+    if (e.target.closest('#set-add'))    { addSet(); return; }
+    if (e.target.closest('#set-remove')) { removeSet(); return; }
     const list = e.target.closest('#set-lists [data-list]');
     if (list) {
       activeList = activeList === list.dataset.list ? null : list.dataset.list; // click again to hide
@@ -218,6 +275,10 @@
     }
     if (e.target.id === 'set-expr') render();
   });
+  document.addEventListener('change', e => {
+    if (e.target.id === 'set-pair') render();
+  });
 
+  rebuildControls();
   render();
 })();
