@@ -91,8 +91,15 @@ if (treeSection) { // only run when this page exists in the HTML
         `<text x="${px(n) + 14}" y="${py(n) - 10}" text-anchor="middle" font-size="11" fill="#fff">${visit.indexOf(n) + 1}</text>`).join('') + '</svg>';
   }
  
+        for (const info of Object.values(kinds)) { // a separate output line above each tree
+    info.out = document.createElement('div');
+    info.out.style.cssText = 'margin:8px 0;font-family:monospace;font-size:15px;min-height:1.2em';
+    info.draw.before(info.out);
+  }
+
   async function build(kind) { // runs when you press Build or Enter in the box called `kind`
     treeError.textContent = ''; // clear the old error
+    if (!kinds[kind].input.value.trim()) { resetAll(); return; } // empty box: reset everything
     try {
       const expr = toInfix(kind, kinds[kind].input.value); // convert what was typed to infix
       const response = await fetch('/api/expression', { // ask the server to build the tree
@@ -101,22 +108,37 @@ if (treeSection) { // only run when this page exists in the HTML
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'That expression is not valid.');
       for (const [name, info] of Object.entries(kinds)) { // update all three sections
-        if (name !== kind) info.input.value = data[name]; // fill the OTHER two boxes (keep what you typed)
+        info.out.textContent = name === kind ? '' : 'Output: ' + data[name]; // text shows here, never in the input box
         info.draw.innerHTML = drawTree(data.tree, info.order); // redraw the tree with this order's numbers
       }
     } catch (error) {
       treeError.textContent = error.message; // show the problem
     }
   }
- 
+
   for (const [name, info] of Object.entries(kinds)) { // wire up each box
     info.input.addEventListener('keydown', (event) => { if (event.key === 'Enter') build(name); }); // Enter builds
   }
   document.querySelectorAll('[data-build]').forEach((button) => { // wire up each Build button
     button.addEventListener('click', () => build(button.dataset.build));
   });
- 
-  kinds.infix.input.value = 'A+B/D-E'; // starting example
-  build('infix');
+
+  function resetAll() { // clear all three boxes, outputs, trees and any error
+    treeError.textContent = '';
+    for (const info of Object.values(kinds)) { info.input.value = ''; info.out.textContent = ''; info.draw.innerHTML = ''; }
+    kinds.prefix.input.focus(); // ready for a new expression
+  }
+
+  const resetButton = document.createElement('button'); // the Reset button
+  resetButton.type = 'button';
+  resetButton.textContent = 'Reset';
+  const buildButton = document.querySelector('[data-build]');
+  if (buildButton) resetButton.className = buildButton.className; // copy the Build button's look
+  resetButton.addEventListener('click', resetAll);
+
+  const resetBar = document.createElement('div'); // puts the button at the bottom centre
+  resetBar.style.cssText = 'display:flex;justify-content:center;margin:24px 0';
+  resetBar.append(resetButton);
+  treeSection.append(resetBar);
 }
  
