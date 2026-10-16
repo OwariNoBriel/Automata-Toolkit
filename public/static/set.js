@@ -1,116 +1,96 @@
-// Sets tab. Python does every set operation; this file only sends the sets and shows the answers.
-const setSection = document.getElementById('page-set'); // the whole Sets page
-if (setSection) { // only run when this page exists in the HTML
-  const esc = (value) => String(value) // makes text safe to put inside HTML
-    .replace(/&/g, '&amp;') // & becomes &amp;
-    .replace(/</g, '&lt;') // < becomes &lt;
-    .replace(/>/g, '&gt;') // > becomes &gt;
-    .replace(/"/g, '&quot;'); // " becomes &quot;
-
-  function show(answer) { // true/false answers are shown as Yes/No
-    if (answer === true) return 'Yes'; // true becomes Yes
-    if (answer === false) return 'No'; // false becomes No
-    return answer; // everything else is shown as it is
-  }
-
-  function table(rows) { // turn [label, answer] rows into an HTML table
-    let html = '<table>'; // start the table
-    for (const [label, answer] of rows) { // one table row per pair
-      html += `<tr><th>${esc(label)}</th><td>${esc(show(answer))}</td></tr>`; // a label cell and an answer cell
-    }
-    return html + '</table>'; // close the table
-  }
-
-  const setInputs = { // the page elements we talk to
-    a: document.getElementById('set-a'), // Set A box
-    b: document.getElementById('set-b'), // Set B box
-    run: document.getElementById('set-run'), // the Run button
-    output: document.getElementById('set-output') // where results appear
-  };
-
-  function productCard(product) { // one Cartesian product card
-    const plural = product.count === 1 ? '' : 's'; // "1 pair" but "4 pairs"
-    let html = `<div class="set-card"><h3>Cartesian product ${product.name} <small>${product.count} pair${plural}</small></h3>`; // card and title
-    if (product.pairs === null) { // Python decided there are too many pairs to list
-      html += `<p class="hint">Too many pairs to list. The limit is ${product.limit}.</p>`; // say so
-    } else if (product.pairs.length === 0) { // an empty set gives no pairs
-      html += '<div class="chip-list"><span>∅</span></div>'; // show the empty-set sign
-    } else { // there are pairs to show
-      html += '<div class="chip-list">'; // start the row of chips
-      for (const [x, y] of product.pairs) { // one chip per ordered pair
-        html += `<span>(${esc(x)}, ${esc(y)})</span>`; // written as (x, y)
-      }
-      html += '</div>'; // end the row of chips
-    }
-    return html + '</div>'; // close the card
-  }
-
-  function powerCard(power) { // one power set card
-    let count = `2<sup>${power.n}</sup>`; // a huge count is written as 2 to the power n
-    if (power.count !== null) { // Python sent a normal number
-      count = `${power.count} subset${power.count === 1 ? '' : 's'}`; // "1 subset" but "8 subsets"
-    }
-    let html = `<div class="set-card"><h3>Power set P(${power.name}) <small>${count}</small></h3>`; // card and title
-    if (power.subsets === null) { // Python decided there are too many subsets to list
-      html += `<p class="hint">Too many subsets to list. The limit is ${power.limit} elements.</p>`; // say so
-    } else { // there are subsets to show
-      html += '<div class="power-set">'; // start the row of chips
-      for (const subset of power.subsets) { // one chip per subset
-        const label = subset.length === 0 ? '∅' : '{' + esc(subset.join(', ')) + '}'; // the empty set is written ∅
-        html += `<span>${label}</span>`; // the chip
-      }
-      html += '</div>'; // end the row of chips
-    }
-    return html + '</div>'; // close the card
-  }
-
-  async function analyzeSets() { // send the sets to Python and show the result
-    const response = await fetch('/api/sets', { // ask the server
-      method: 'POST', // we are sending data
-      headers: { 'Content-Type': 'application/json' }, // the data is JSON
-      body: JSON.stringify({ a: setInputs.a.value, b: setInputs.b.value }) // the two typed sets
-    });
-    const data = await response.json(); // read the answer
-
-    if (data.empty) { // nothing was typed
-      setInputs.output.innerHTML = '<p class="hint">Enter at least one set.</p>'; // show a hint
-      return; // nothing more to show
-    }
-
-    let html = table(data.table); // the operation rows
-    for (const product of data.products) html += productCard(product); // A × B and B × A
-    for (const power of data.powers) html += powerCard(power); // P(A) and P(B)
-    setInputs.output.innerHTML = html; // put it all on the page
-  }
-
-  setInputs.run.addEventListener('click', analyzeSets); // run when the button is clicked
-  for (const input of [setInputs.a, setInputs.b]) { // both set boxes
-    input.addEventListener('keydown', (event) => { // when a key is pressed in one
-      if (event.key === 'Enter') analyzeSets(); // the Enter key also runs
-    });
-  }
-}
 (() => {
-  if (window.__setExprLoaded) return;
-  window.__setExprLoaded = true;
+  if (window.__setToolLoaded) return;       // avoid double listeners
+  window.__setToolLoaded = true;
 
   const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const parseSet = s => new Set((s || '').split(/[,\s]+/).filter(Boolean));
   const sortItems = arr => arr.sort((x, y) =>
     isNaN(x - y) ? String(x).localeCompare(String(y)) : x - y);
   const show = s => '{' + sortItems([...s]).join(', ') + '}';
+  const yn = b => (b ? 'Yes' : 'No');
 
+  const POWER_LIMIT = 10;     // list the power set only up to 10 elements
+  const PRODUCT_LIMIT = 200;  // list a Cartesian product only up to 200 pairs
+
+  /* ---------- the operations (each takes the current set and B) ---------- */
+  const OPS = {
+    union:  { label: 'Union (A ∪ B)',          fn: (a, b) => new Set([...a, ...b]) },
+    inter:  { label: 'Intersection (A ∩ B)',   fn: (a, b) => new Set([...a].filter(x => b.has(x))) },
+    diffAB: { label: 'Difference (A − B)',     fn: (a, b) => new Set([...a].filter(x => !b.has(x))) },
+    diffBA: { label: 'Difference (B − A)',     fn: (a, b) => new Set([...b].filter(x => !a.has(x))) },
+    sym:    { label: 'Symmetric diff (A Δ B)', fn: (a, b) => new Set([...a, ...b].filter(x => a.has(x) !== b.has(x))) },
+  };
+
+  let pipeline = [];      // operations clicked so far (replayed from Set A every time, so A and B stay live)
+  let activeList = null;  // 'power' | 'prodAB' | 'prodBA' | null
+
+  /* ---------- power set and Cartesian product ---------- */
+  function powerHtml(cur) {
+    const items = sortItems([...cur]);
+    const n = items.length;
+    const count = n <= 30 ? String(2 ** n) : `2<sup>${n}</sup>`;
+    const head = `<b>P(current)</b> — ${count} subset${n === 0 ? '' : 's'}`;
+    if (n > POWER_LIMIT) return `${head}<br>Too many subsets to list. The limit is ${POWER_LIMIT} elements.`;
+    let subsets = [[]];
+    for (const x of items) subsets = subsets.concat(subsets.map(s => [...s, x]));
+    subsets.sort((p, q) => p.length - q.length);   // smallest subsets first (sort is stable)
+    return head + '<div class="chip-list">' +
+      subsets.map(s => `<span>${s.length ? '{' + esc(s.join(', ')) + '}' : '∅'}</span>`).join('') + '</div>';
+  }
+
+  function productHtml(left, right, name) {
+    const l = sortItems([...left]), r = sortItems([...right]);
+    const total = l.length * r.length;
+    const head = `<b>${name}</b> — ${total} pair${total === 1 ? '' : 's'}`;
+    if (total > PRODUCT_LIMIT) return `${head}<br>Too many pairs to list. The limit is ${PRODUCT_LIMIT}.`;
+    if (total === 0) return `${head}<div class="chip-list"><span>∅</span></div>`;
+    const pairs = [];
+    for (const x of l) for (const y of r) pairs.push(`<span>(${esc(x)}, ${esc(y)})</span>`);
+    return head + '<div class="chip-list">' + pairs.join('') + '</div>';
+  }
+
+  /* ---------- draw everything ---------- */
+  function render() {
+    if (!$('set-a') || !$('set-steps')) return;
+    const a = parseSet($('set-a').value);
+    const b = parseSet($('set-b').value);
+    let cur = a;
+    const rows = [{ label: 'Start (Set A)', value: cur }];
+    for (const key of pipeline) {
+      cur = OPS[key].fn(cur, b);
+      rows.push({ label: OPS[key].label, value: cur });
+    }
+
+    $('set-out').textContent = show(cur);
+
+    $('set-steps').innerHTML =
+      '<tr><th>Step</th><th>Value</th><th>Size</th></tr>' +
+      rows.map(r => `<tr><td>${esc(r.label)}</td><td>${esc(show(r.value))}</td><td>${r.value.size}</td></tr>`).join('');
+
+    $('set-cur').textContent  = show(cur);
+    $('set-size').textContent = cur.size;
+    $('set-sub').textContent  = yn([...cur].every(x => b.has(x)));
+    $('set-sup').textContent  = yn([...b].every(x => cur.has(x)));
+    $('set-disj').textContent = yn([...cur].every(x => !b.has(x)));
+
+    document.querySelectorAll('#set-lists [data-list]').forEach(btn =>
+      btn.setAttribute('aria-pressed', String(btn.dataset.list === activeList)));
+    const box = $('set-info');
+    if (activeList === 'power')       box.innerHTML = powerHtml(cur);
+    else if (activeList === 'prodAB') box.innerHTML = productHtml(cur, b, 'current × B');
+    else if (activeList === 'prodBA') box.innerHTML = productHtml(b, cur, 'B × current');
+    box.hidden = !activeList;
+
+    runExpr();
+  }
+
+  /* ---------- expression evaluator (uses the original A and B) ---------- */
   const UNION = new Set(['u', '∪', '+']);
   const INTER = new Set(['n', '∩', '*']);
   const DIFF  = new Set(['-', '\\', '−']);
   const SYM   = new Set(['d', 'Δ', '△', '^']);
-
-  const OPS = {
-    union: (a, b) => new Set([...a, ...b]),
-    inter: (a, b) => new Set([...a].filter(x => b.has(x))),
-    diff:  (a, b) => new Set([...a].filter(x => !b.has(x))),
-    sym:   (a, b) => new Set([...a, ...b].filter(x => a.has(x) !== b.has(x))),
-  };
+  const EXPR_OPS = { union: OPS.union.fn, inter: OPS.inter.fn, diff: OPS.diffAB.fn, sym: OPS.sym.fn };
 
   function tokenize(src) {
     const out = [];
@@ -131,7 +111,6 @@ if (setSection) { // only run when this page exists in the HTML
   function evaluate(src, sets) {
     const toks = tokenize(src);
     let i = 0;
-
     function operand() {
       const tk = toks[i++];
       if (!tk) throw Error('Expression ended too early');
@@ -148,38 +127,48 @@ if (setSection) { // only run when this page exists in the HTML
       let left = operand();
       while (toks[i] && toks[i].t === 'op') {
         const op = toks[i++].v;
-        left = OPS[op](left, operand());
+        left = EXPR_OPS[op](left, operand());
       }
       return left;
     }
-
     const result = chain();
     if (i < toks.length) throw Error(toks[i].t === ')' ? 'Extra )' : 'Missing operator between sets');
     return result;
   }
 
-  function run() {
+  function runExpr() {
     const box = $('set-expr');
     const out = $('set-expr-out');
     if (!box || !out) return;
     const src = box.value.trim();
     if (!src) { out.innerHTML = '<p class="hint">Type an expression using A and B.</p>'; return; }
     try {
-      const sets = { a: parseSet($('set-a').value), b: parseSet($('set-b').value) };
-      const r = evaluate(src, sets);
+      const r = evaluate(src, { a: parseSet($('set-a').value), b: parseSet($('set-b').value) });
       out.innerHTML =
-        `<table><tr><th>Expression</th><td>${src.replace(/</g, '&lt;')}</td></tr>` +
-        `<tr><th>Result</th><td>${show(r)}</td></tr>` +
-        `<tr><th>Size</th><td>${r.size}</td></tr></table>`;
+        `<div class="kv"><span>Expression</span><b>${esc(src)}</b></div>` +
+        `<div class="kv"><span>Result</span><b>${esc(show(r))}</b></div>` +
+        `<div class="kv"><span>Size</span><b>${r.size}</b></div>`;
     } catch (e) {
-      out.innerHTML = `<p class="no">${e.message}</p>`;
+      out.innerHTML = `<p class="err">${esc(e.message)}</p>`;
     }
   }
 
-  document.addEventListener('input', e => {
-    if (['set-expr', 'set-a', 'set-b'].includes(e.target.id)) run();
-  });
+  /* ---------- events (delegated, so load order doesn't matter) ---------- */
   document.addEventListener('click', e => {
-    if (e.target.closest('#set-run')) run();
+    const op = e.target.closest('#set-ops [data-op]');
+    if (op) { pipeline.push(op.dataset.op); render(); return; }
+    const list = e.target.closest('#set-lists [data-list]');
+    if (list) {
+      activeList = activeList === list.dataset.list ? null : list.dataset.list; // click again to hide
+      render();
+      return;
+    }
+    if (e.target.closest('#set-undo'))  { pipeline.pop(); render(); }
+    if (e.target.closest('#set-reset')) { pipeline = []; render(); }
   });
+  document.addEventListener('input', e => {
+    if (['set-a', 'set-b', 'set-expr'].includes(e.target.id)) render();
+  });
+
+  render();
 })();
