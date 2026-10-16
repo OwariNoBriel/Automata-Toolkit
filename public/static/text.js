@@ -36,78 +36,19 @@
     $('outPal').textContent      = v === '' ? '—' : (v === [...chars].reverse().join('') ? 'Yes' : 'No');
   }
 
-  /* ---------- notation converter ---------- */
-  const PREC = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
-  const RIGHT = { '^': true };
-  const isOp = t => t in PREC;
-  const tokenize = s => s.match(/[A-Za-z0-9.]+|[-+*/^()]/g) || [];
-
-  function fromPostfix(tokens) {
-    const st = [];
-    for (const x of tokens) {
-      if (isOp(x)) {
-        const r = st.pop(), l = st.pop();
-        if (!l || !r) throw Error('Invalid postfix expression');
-        st.push({ v: x, l, r });
-      } else st.push({ v: x });
-    }
-    if (st.length !== 1) throw Error('Invalid postfix expression');
-    return st[0];
+    /* ---------- prefix / suffix restorer ---------- */
+  function restore(text, kind) { // kind is 'prefix' or 'suffix'
+    const parts = text.split(/[,\s]+/).filter(Boolean); // split on commas and spaces
+    if (!parts.length) return '';
+    const whole = parts.reduce((a, b) => (b.length > a.length ? b : a)); // longest piece = the original
+    const bad = parts.find(p => !(kind === 'prefix' ? whole.startsWith(p) : whole.endsWith(p)));
+    if (bad) throw Error(`"${bad}" is not a ${kind} of "${whole}".`);
+    return whole;
   }
-  function fromPrefix(tokens) {
-    const st = [];
-    for (const x of [...tokens].reverse()) {
-      if (isOp(x)) {
-        const l = st.pop(), r = st.pop();
-        if (!l || !r) throw Error('Invalid prefix expression');
-        st.push({ v: x, l, r });
-      } else st.push({ v: x });
-    }
-    if (st.length !== 1) throw Error('Invalid prefix expression');
-    return st[0];
-  }
-  function fromInfix(tokens) {
-    const out = [], ops = [];
-    for (const x of tokens) {
-      if (isOp(x)) {
-        while (ops.length) {
-          const top = ops[ops.length - 1];
-          if (isOp(top) && (PREC[top] > PREC[x] || (PREC[top] === PREC[x] && !RIGHT[x]))) out.push(ops.pop());
-          else break;
-        }
-        ops.push(x);
-      } else if (x === '(') ops.push(x);
-      else if (x === ')') {
-        while (ops.length && ops[ops.length - 1] !== '(') out.push(ops.pop());
-        if (!ops.length) throw Error('Mismatched parentheses');
-        ops.pop();
-      } else out.push(x);
-    }
-    while (ops.length) {
-      const o = ops.pop();
-      if (o === '(') throw Error('Mismatched parentheses');
-      out.push(o);
-    }
-    return fromPostfix(out);
-  }
-  function toInfix(n) {
-    if (!n.l) return n.v;
-    const p = PREC[n.v];
-    const wrap = (c, isRight) => {
-      const s = toInfix(c);
-      if (!c.l) return s;
-      const q = PREC[c.v];
-      return (q < p || (q === p && isRight !== !!RIGHT[n.v])) ? `(${s})` : s;
-    };
-    return `${wrap(n.l, false)} ${n.v} ${wrap(n.r, true)}`;
-  }
-  const toPrefix  = n => n.l ? `${n.v} ${toPrefix(n.l)} ${toPrefix(n.r)}` : n.v;
-  const toPostfix = n => n.l ? `${toPostfix(n.l)} ${toPostfix(n.r)} ${n.v}` : n.v;
 
   const MODES = {
-    'post-in':  { parse: fromPostfix, emit: toInfix,   hint: 'a b + c *' },
-    'in-pre':   { parse: fromInfix,   emit: toPrefix,  hint: '(a + b) * c' },
-    'pre-post': { parse: fromPrefix,  emit: toPostfix, hint: '* + a b c' },
+    'prefix-str': { kind: 'prefix' },
+    'suffix-str': { kind: 'suffix' },
   };
 
   function convert() {
@@ -116,8 +57,7 @@
     $('convIn').placeholder = m.hint;
     $('convErr').textContent = '';
     try {
-      const tokens = tokenize($('convIn').value);
-      $('convOut').textContent = tokens.length ? m.emit(m.parse(tokens)) : '—';
+      $('convOut').textContent = dash(restore($('convIn').value, m.kind));
     } catch (e) {
       $('convOut').textContent = '—';
       $('convErr').textContent = e.message;

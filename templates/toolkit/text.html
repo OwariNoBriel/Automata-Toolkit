@@ -31,17 +31,16 @@
     </div>
 
     <div class="card">
-      <h3>Notation converter</h3>
+      <h3>Restore original string</h3>
       <div class="field">
         <label for="convMode">Conversion</label>
         <select id="convMode">
-          <option value="post-in">Suffix (postfix) → Infix</option>
-          <option value="in-pre">Infix → Prefix</option>
-          <option value="pre-post">Prefix → Suffix (postfix)</option>
+          <option value="prefix-str">Prefixes → Infix</option>
+          <option value="suffix-str">Suffixes → Infix</option>
         </select>
       </div>
-      <div class="field"><label for="convIn">Expression</label><input id="convIn" autocomplete="off"></div>
-      <div class="kv"><span>Result</span><b id="convOut"></b></div>
+      <div class="field"><label for="convIn">Prefixes / Suffixes</label><input id="convIn" autocomplete="off"></div>
+      <div class="kv"><span>Original</span><b id="convOut"></b></div>
       <div id="convErr" class="err"></div>
     </div>
   </div>
