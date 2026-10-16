@@ -32,11 +32,11 @@
     $('outCurrent').textContent  = dash(v);
     $('outLength').textContent   = chars.length;
     $('outPrefixes').textContent = dash(chars.map((_, i) => chars.slice(0, i + 1).join('')).join(', '));
-    $('outSuffixes').textContent = dash(chars.map((_, i) => chars.slice(i).join('')).join(', '));
+    $('outSuffixes').textContent = dash(chars.map((_, i) => chars.slice(chars.length - 1 - i).join('')).join(', '));
     $('outPal').textContent      = v === '' ? '—' : (v === [...chars].reverse().join('') ? 'Yes' : 'No');
   }
 
-    /* ---------- prefix / suffix restorer ---------- */
+  /* ---------- prefix / suffix restorer ---------- */
   function restore(text, kind) { // kind is 'prefix' or 'suffix'
     const parts = text.split(/[,\s]+/).filter(Boolean); // split on commas and spaces
     if (!parts.length) return '';
@@ -47,8 +47,8 @@
   }
 
   const MODES = {
-    'prefix-str': { kind: 'prefix' },
-    'suffix-str': { kind: 'suffix' },
+    'prefix-str': { kind: 'prefix'},
+    'suffix-str': { kind: 'suffix'},
   };
 
   function convert() {
