@@ -10,18 +10,24 @@
       </div>
 
       <div class="btn-row" id="ops">
-        <button data-op="concat">Concat (+ B)</button>
+        <button data-op="concatAB">Concat (A + B)</button>
+        <button data-op="concatBA">Concat (B + A)</button>
         <button data-op="reverse">Reverse</button>
         <button data-op="upper">Uppercase</button>
         <button data-op="lower">Lowercase</button>
-        <button data-op="prefixes">Prefixes</button>
-        <button data-op="suffixes">Suffixes</button>
       </div>
       <div class="btn-row">
-        <button id="undo" class="ghost">Undo</button>
-        <button id="reset" class="ghost">Reset</button>
+        <button id="undo">Undo</button>
+        <button id="reset">Reset</button>
       </div>
+    </div>
 
+    <div class="card">
+      <h3>Prefixes &amp; Suffixes</h3>
+      <div class="btn-row" id="lists">
+        <button data-list="prefixes" aria-pressed="false">Prefixes</button>
+        <button data-list="suffixes" aria-pressed="false">Suffixes</button>
+      </div>
       <div id="textInfo" class="info-box" hidden></div>
     </div>
   </div>

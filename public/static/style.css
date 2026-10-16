@@ -106,11 +106,17 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 .text-tool .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .text-tool .btn-row + .btn-row { margin-top: 10px; }
 .text-tool .card button {
-  background: #b9a2f0; color: #1b1d2b; border: 0; border-radius: 8px;
+  background: #272a3c; color: #e6e8f2;
+  border: 1px solid #3a3e55; border-radius: 8px;
   padding: 9px 16px; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
 }
-.text-tool .card button:hover { filter: brightness(1.1); }
-.text-tool .card button.ghost { background: transparent; color: #b9a2f0; border: 1px solid #b9a2f0; }
+.text-tool .card button:hover,
+.text-tool .card button:active,
+.text-tool .card button:focus-visible,
+.text-tool .card button[aria-pressed="true"] {
+  background: #b9a2f0; color: #1b1d2b; border-color: #b9a2f0;
+}
 
 .text-tool .out-box {
   background: #1f2130; color: #e6e8f2;

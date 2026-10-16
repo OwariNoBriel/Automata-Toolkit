@@ -5,29 +5,40 @@
   const $ = id => document.getElementById(id);
   const dash = s => (s === '' ? '—' : s);
 
-  // Operations that change the text. Each one takes the current text (and B) and returns the new text.
+  // Operations that change the text. Each takes the current text (and B) and returns the new text.
   const OPS = {
-    concat:  (v, b) => v + b,
-    reverse: v => [...v].reverse().join(''),
-    upper:   v => v.toUpperCase(),
-    lower:   v => v.toLowerCase(),
+    concatAB: (v, b) => v + b,
+    concatBA: (v, b) => b + v,
+    reverse:  v => [...v].reverse().join(''),
+    upper:    v => v.toUpperCase(),
+    lower:    v => v.toLowerCase(),
   };
 
-  // Operations that only list something about the current text (they don't change it).
+  // Lists about the current text (they don't change it).
   const LISTS = {
     prefixes: chars => chars.map((_, i) => chars.slice(0, i + 1).join('')),
     suffixes: chars => chars.map((_, i) => chars.slice(chars.length - 1 - i).join('')),
   };
 
-  let current = '';   // the text shown in the output box
-  let history = [];   // earlier values, so Undo works
+  let current = '';       // the text shown in the output box
+  let history = [];       // earlier values, so Undo works
+  let activeList = null;  // 'prefixes' | 'suffixes' | null
 
-  function show(info) {
+  function show() {
     if (!$('textOut')) return;
     $('textOut').textContent = dash(current);
+
+    document.querySelectorAll('#lists [data-list]').forEach(btn =>
+      btn.setAttribute('aria-pressed', String(btn.dataset.list === activeList)));
+
     const box = $('textInfo');
-    box.hidden = !info;
-    box.textContent = info || '';
+    if (activeList) {
+      const items = LISTS[activeList]([...current]);
+      box.textContent = items.length ? items.join(', ') : '—';
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+    }
   }
 
   function syncFromA() {          // Text A changed: start over from what was typed
@@ -37,17 +48,17 @@
   }
 
   document.addEventListener('click', e => {
-    const btn = e.target.closest('#ops [data-op]');
-    if (btn) {
-      const op = btn.dataset.op;
-      if (OPS[op]) {
-        history.push(current);
-        current = OPS[op](current, $('textB').value);
-        show();
-      } else if (LISTS[op]) {
-        const items = LISTS[op]([...current]);
-        show(items.length ? `${btn.textContent}: ${items.join(', ')}` : `${btn.textContent}: —`);
-      }
+    const op = e.target.closest('#ops [data-op]');
+    if (op) {
+      history.push(current);
+      current = OPS[op.dataset.op](current, $('textB').value);
+      show();
+      return;
+    }
+    const list = e.target.closest('#lists [data-list]');
+    if (list) {
+      activeList = activeList === list.dataset.list ? null : list.dataset.list; // click again to hide
+      show();
       return;
     }
     if (e.target.closest('#undo'))  { if (history.length) current = history.pop(); show(); }
