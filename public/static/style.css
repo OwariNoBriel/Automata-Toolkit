@@ -59,8 +59,9 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 .regex-read{font-family:ui-monospace,Consolas,monospace;color:var(--acc);margin:0 0 4px;word-break:break-word}
 .regex-meta{color:var(--mute);font-size:.9rem;margin:0 0 8px}
 .regex-error{color:var(--bad);margin:0}
-.regex-group{display:grid;grid-template-columns:76px 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.regex-group{display:grid;grid-template-columns:minmax(76px,150px) 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
 .regex-group b{color:var(--mute);font-size:.85rem;font-weight:600;padding-top:3px}
+.regex-group b small{display:block;font:400 .8rem ui-monospace,Consolas,monospace;color:var(--acc);word-break:break-word}
 .regex-words{display:flex;flex-wrap:wrap;gap:6px}
 .regex-words span{font-family:ui-monospace,Consolas,monospace;background:#262635;border:1px solid var(--line);border-radius:6px;padding:2px 8px;word-break:break-all}
 .regex-legend dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:.9rem;color:var(--mute)}

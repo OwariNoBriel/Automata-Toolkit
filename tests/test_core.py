@@ -136,49 +136,52 @@ def test_expression_bad_input_rejected():                                       
 
 # ---------- Regular operations ----------
 
-def test_regex_plus_generates_repeats():                                                            # test: the + operator (one or more repeats)
-    assert regex_ops.generate("A+BC", 6)["words"] == ["ABC", "AABC", "AAABC", "AAAABC"]             # A+BC gives ABC, AABC, AAABC, AAAABC (words up to length 6)
+def words_of(regex, iterations=4):                                                                  # helper: the strings of every path, as a list of lists (one list per path)
+    return [path["words"] for path in regex_ops.generate(regex, iterations)["paths"]]               # take just the words of each path
+
+
+def test_regex_plus_generates_repeats():                                                            # test: the + operator (one or more repeats), one string per iteration
+    assert words_of("A+B", 4) == [["AB", "AAB", "AAAB", "AAAAB"]]                                   # A+B gives AB, AAB, AAAB ... (iteration j repeats A j times)
+    assert words_of("A+BC", 4) == [["ABC", "AABC", "AAABC", "AAAABC"]]                              # A+BC gives ABC, AABC, AAABC, AAAABC
 
 
 def test_regex_star_alternation_and_groups():                                                       # test: * (zero or more), | (or) and ( ) groups
-    assert regex_ops.generate("A*B", 3)["words"] == ["B", "AB", "AAB"]                              # A*B: B, AB, AAB (up to length 3)
-    assert regex_ops.generate("A|BC", 5)["words"] == ["A", "BC"]                                    # A|BC: either 'A' or 'BC'
-    assert regex_ops.generate("(AB)+", 6)["words"] == ["AB", "ABAB", "ABABAB"]                      # (AB)+: AB repeated one or more times
-    assert "" in regex_ops.generate("(A|B)*", 2)["words"]                                           # (A|B)* includes the empty word
-    assert regex_ops.generate("(A|B)*", 2)["words"] == ["", "A", "B", "AA", "AB", "BA", "BB"]       # all words made of A and B up to length 2, shortest first
-    assert regex_ops.generate("A(B|C)*", 3)["words"] == ["A", "AB", "AC", "ABB", "ABC", "ACB", "ACC"]  # A followed by any mix of B and C
+    assert words_of("A*B", 3) == [["B", "AB", "AAB"]]                                               # A*B: B, AB, AAB (iteration j repeats A j-1 times)
+    assert words_of("A|BC", 5) == [["A"], ["BC"]]                                                   # A|BC: two paths, each a single string
+    assert words_of("(AB)+", 3) == [["AB", "ABAB", "ABABAB"]]                                       # (AB)+: AB repeated j times
+    assert words_of("(A|B)*", 3) == [["", "A", "AA"], ["", "B", "BB"]]                              # (A|B)*: the A path and the B path, never mixed
+    assert words_of("A(B|C)*", 3) == [["A", "AB", "ABB"], ["A", "AC", "ACC"]]                       # A followed by the B path or the C path
 
 
-def test_regex_matches_python_re():  # cross-check against the built-in regular expression engine
+def test_regex_star_then_plus_runs_in_step():                                                       # test: the example from the professor, (A|B)*C+
+    assert words_of("(A|B)*C+", 4) == [["C", "ACC", "AACCC", "AAACCCC"], ["C", "BCC", "BBCCC", "BBBCCCC"]]  # star j-1 times, plus j times, one path per choice
+    assert words_of("(A|B)+C+", 3) == [["AC", "AACC", "AAACCC"], ["BC", "BBCC", "BBBCCC"]]          # with + in front, the first iteration already has one repeat
+
+
+def test_regex_strings_are_valid_matches():                                                         # test: every generated string must really match the expression
     import re                                                                                       # load Python's built-in regular expressions to check our answers
 
-    for pattern in ("A+BC", "A*B", "(AB)+", "A|BC", "(A|B)*C", "(AB|C)+D", "A(B|C)*", "(A*B)+", "((A|B)C)*"):  # try each pattern in this list
-        words = regex_ops.generate(pattern, 6)["words"]                                             # words produced by our generator (up to length 6)
-        expected = []                                                                               # list for the correct words
-        for size in range(7):                                                                       # check word lengths 0 to 6
-            for word in itertools_words("ABCD", size):                                              # every possible word of this length using A, B, C, D
-                if re.fullmatch(pattern, word):                                                     # keep the word only if Python's regex matches the whole word
-                    expected.append(word)                                                           # add it to the correct list
-        assert words == expected, pattern                                                           # our generator must give exactly the same words (the pattern is shown if it fails)
+    for pattern in ("A+BC", "A*B", "(AB)+", "A|BC", "(A|B)*C+", "(AB|C)+D", "A(B|C)*", "(A*B)+", "((A|B)C)*"):  # try each pattern in this list
+        for path_words in words_of(pattern, 5):                                                     # every path of the pattern
+            assert path_words, pattern                                                              # every path gives at least one string
+            for word in path_words:                                                                 # every string of that path
+                assert re.fullmatch(pattern, word), (pattern, word)                                 # Python's regex must accept it (the pattern is shown if it fails)
 
 
-def itertools_words(alphabet, size):                                                                # helper: every word of a given length from the alphabet
-    import itertools                                                                                # load itertools (for combinations)
-
-    return ["".join(p) for p in itertools.product(alphabet, repeat=size)]                           # product() makes every combination; join turns each into a string
-
-
-def test_regex_read_and_limits():                                                                   # test: the 'read' text and the length limits
+def test_regex_read_and_limits():                                                                   # test: the 'read' text and the iteration limits
     assert regex_ops.generate("A+BC")["read"] == "A+ · B · C"                                       # the regex is shown split into parts
-    assert regex_ops.generate("A*", 99)["max_len"] == regex_ops.MAX_LEN_LIMIT  # asked for too long
-    assert regex_ops.generate("A*", "oops")["max_len"] == 6  # unreadable length falls back to the default
+    assert regex_ops.generate("A*", 99)["iterations"] == regex_ops.MAX_ITER_LIMIT                   # asked for too many
+    assert regex_ops.generate("A*", 0)["iterations"] == 1                                           # asked for too few
+    assert regex_ops.generate("A*", "oops")["iterations"] == regex_ops.DEFAULT_ITER                 # unreadable count falls back to the default
+    assert regex_ops.generate("(A|B)*C+", 4)["count"] == 8                                          # 4 strings on each of the 2 paths
 
 
 def test_regex_worst_case_is_fast():                                                                # test: a huge pattern must not freeze the app
     import time                                                                                     # load time (to measure how long it takes)
 
     start = time.time()                                                                             # note the start time
-    regex_ops.generate("(A|B|C)*(A|B|C)*(A|B)*", 10)  # a huge language: the cap must keep it quick
+    result = regex_ops.generate("(A|B|C|D)(A|B|C|D)(A|B|C|D)(A|B|C|D)(A|B|C|D)(A|B|C|D)(A|B|C|D)(A|B|C|D)", 10)  # 4^8 possible paths: the cap must keep it quick
+    assert len(result["paths"]) <= regex_ops.MAX_PATHS                                              # no more paths than the cap
     assert time.time() - start < 3                                                                  # it must finish in under 3 seconds
 
 
@@ -198,7 +201,7 @@ def test_api_routes():                                                          
     assert client.post("/api/expression", json={"expr": "A+"}).status_code == 400                   # an invalid expression: status 400 (bad request)
     assert client.post("/api/text", json={"a": "abba", "b": ""}).get_json()["empty"] is False       # text route with 'abba' returns a real result (not empty)
     assert client.post("/api/sets", json={"a": "1", "b": "2"}).get_json()["empty"] is False         # sets route with {1} and {2} returns a real result
-    assert client.post("/api/regex", json={"regex": "A+BC"}).get_json()["count"] == 4               # regex route returns the 4 words
+    assert client.post("/api/regex", json={"regex": "A+BC"}).get_json()["count"] == 4               # regex route returns the 4 strings (default 4 iterations)
     assert client.post("/api/regex", json={"regex": "("}).status_code == 400                        # an invalid regex: status 400
 
 

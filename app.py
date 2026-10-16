@@ -45,10 +45,10 @@ def sets():  # run the set operations
 
 
 @app.post("/api/regex")  # Regular Operations tab
-def regex():  # list the strings an expression produces
+def regex():  # list the strings an expression produces, path by path
     d = _data()  # what the browser sent
     try:  # the expression may be malformed
-        return jsonify(regex_ops.generate(_text(d, "regex"), d.get("max_len", 6)))  # send the strings
+        return jsonify(regex_ops.generate(_text(d, "regex"), d.get("iterations", 4)))  # send the strings
     except ValueError as e:  # the lesson explained what is wrong
         return jsonify(error=str(e)), 400  # send the explanation with an error status
 

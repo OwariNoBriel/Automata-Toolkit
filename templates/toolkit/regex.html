@@ -1,21 +1,21 @@
 <section id="page-regex" class="page">
   <h2 class="regex-title">Regular Operations</h2>
-  <p class="regex-sub">Type an expression. See the strings it produces.</p>
+  <p class="regex-sub">Type an expression. See the strings it produces, one path and one iteration at a time.</p>
 
   <div class="regex-card">
     <label for="regex-input">Expression</label>
     <input id="regex-input" value="A+BC" placeholder="e.g. A+BC or (AB|C)*D" autocomplete="off" spellcheck="false">
     <div class="regex-chips" id="regex-chips"></div>
-    <div class="regex-len"><span>Max length</span><input id="regex-max" type="range" min="1" max="10" value="6"><b id="regex-max-value">6</b></div>
+    <div class="regex-len"><span>Iterations</span><input id="regex-max" type="range" min="1" max="10" value="4"><b id="regex-max-value">4</b></div>
   </div>
 
   <div id="regex-output" class="regex-card"></div>
 
   <div class="regex-card regex-legend">
     <dl>
-      <dt>*</dt><dd>Kleene star: repeat the previous part zero or more times</dd>
-      <dt>+</dt><dd>Kleene plus: repeat the previous part one or more times</dd>
-      <dt>|</dt><dd>Alternation (union): either the left or the right</dd>
+      <dt>*</dt><dd>Kleene star: repeat the previous part zero or more times (iteration j repeats it j-1 times)</dd>
+      <dt>+</dt><dd>Kleene plus: repeat the previous part one or more times (iteration j repeats it j times)</dd>
+      <dt>|</dt><dd>Alternation (union): either the left or the right; each choice becomes its own path</dd>
       <dt>( )</dt><dd>Group parts so an operator applies to all of them</dd>
       <dt>AB</dt><dd>Concatenation: one part followed by the next</dd>
     </dl>

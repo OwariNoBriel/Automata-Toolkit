@@ -24,7 +24,7 @@ A modular web app for learning binary trees, string operations, sets, and regula
 ### Regular Operations
 - Type an expression such as `A+BC` and see the strings it produces (`ABC`, `AABC`, `AAABC`, ...)
 - Supports Kleene star `*`, Kleene plus `+`, alternation `|`, parentheses `( )`, and concatenation
-- Results are grouped by length, with a max-length slider because `*` and `+` repeat forever
+- Results are derived depth-first along one path at a time, with an iterations slider because `*` and `+` repeat forever (iteration j repeats `+` j times and `*` j-1 times; each `|` choice is its own path)
 - Shows how the operators were grouped, and explains malformed expressions in plain language
 
 ### Styling update
@@ -88,7 +88,7 @@ The JavaScript files only send input to Python and draw what comes back.
 
 ### Regular Operations
 - Enter an expression with `*`, `+`, `|`, `( )` and concatenation
-- See the strings it generates, shortest first, up to a chosen length
+- See the strings it generates path by path, one string per iteration (e.g. `A+B` gives `AB, AAB, AAAB ...`; `(A|B)*C+` gives `C, ACC, AACCC ...` and `C, BCC, BBCCC ...`)
 
 ## Run
 
