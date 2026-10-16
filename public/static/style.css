@@ -130,3 +130,22 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
   font-family: ui-monospace, monospace; font-size: .9rem; overflow-wrap: anywhere;
 }
 .text-tool .info-box[hidden] { display: none; }
+
+.text-tool #steps { width: 100%; border-collapse: collapse; margin-top: 0; }
+.text-tool #steps th,
+.text-tool #steps td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #3a3e55; }
+.text-tool #steps th { width: auto; color: #aab0c8; font-size: .8rem; }
+.text-tool #steps td { font-family: ui-monospace, monospace; }
+
+.text-tool .kv {
+  display: grid; grid-template-columns: 110px 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid #3a3e55; align-items: baseline;
+}
+.text-tool .kv:last-of-type { border-bottom: 0; }
+.text-tool .kv span { color: #aab0c8; font-size: .85rem; font-weight: 600; }
+.text-tool .kv b {
+  color: #e6e8f2; font-weight: 500; font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.text-tool .err { color: #ff8a8a; font-size: .85rem; min-height: 1em; }

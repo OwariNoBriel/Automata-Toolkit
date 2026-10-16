@@ -23,12 +23,38 @@
     </div>
 
     <div class="card">
+      <h3>Steps</h3>
+      <table id="steps"></table>
+    </div>
+
+    <div class="card">
+      <h3>Result</h3>
+      <div class="kv"><span>Current</span><b id="outCurrent"></b></div>
+      <div class="kv"><span>Length</span><b id="outLength"></b></div>
+      <div class="kv"><span>Palindrome</span><b id="outPal"></b></div>
+    </div>
+
+    <div class="card">
       <h3>Prefixes &amp; Suffixes</h3>
       <div class="btn-row" id="lists">
         <button data-list="prefixes" aria-pressed="false">Prefixes</button>
         <button data-list="suffixes" aria-pressed="false">Suffixes</button>
       </div>
       <div id="textInfo" class="info-box" hidden></div>
+    </div>
+
+    <div class="card">
+      <h3>Restore original string</h3>
+      <div class="field">
+        <label for="convMode">Conversion</label>
+        <select id="convMode">
+          <option value="prefix">Prefixes → Original</option>
+          <option value="suffix">Suffixes → Original</option>
+        </select>
+      </div>
+      <div class="field"><label for="convIn">Prefixes / Suffixes</label><input id="convIn" autocomplete="off"></div>
+      <div class="kv"><span>Original</span><b id="convOut"></b></div>
+      <div id="convErr" class="err"></div>
     </div>
   </div>
 </section>
