@@ -4,7 +4,8 @@
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const parseSet = s => new Set((s || '').split(/[,\s]+/).filter(Boolean));
+  const SEP = /[,\s]+/;
+  const parseSet = s => new Set((s || '').split(SEP).filter(Boolean));
   const sortItems = arr => arr.sort((x, y) =>
     isNaN(x - y) ? String(x).localeCompare(String(y)) : x - y);
   const show = s => '{' + sortItems([...s]).join(', ') + '}';
@@ -13,24 +14,104 @@
   const POWER_LIMIT = 10;     // list the power set only up to 10 elements
   const PRODUCT_LIMIT = 200;  // list a Cartesian product only up to 200 pairs
 
-  /* ---------- the operations (each takes the current set and B) ---------- */
-  const OPS = {
-    union:  { label: 'Union (A ∪ B)',          fn: (a, b) => new Set([...a, ...b]) },
-    inter:  { label: 'Intersection (A ∩ B)',   fn: (a, b) => new Set([...a].filter(x => b.has(x))) },
-    diffAB: { label: 'Difference (A − B)',     fn: (a, b) => new Set([...a].filter(x => !b.has(x))) },
-    diffBA: { label: 'Difference (B − A)',     fn: (a, b) => new Set([...b].filter(x => !a.has(x))) },
-    sym:    { label: 'Symmetric diff (A Δ B)', fn: (a, b) => new Set([...a, ...b].filter(x => a.has(x) !== b.has(x))) },
-  };
+  /* ---------- Set A / Set B boxes: {  1, 2, 3  } with commas added for you ---------- */
+  function tidy(input, typedInsert) {
+    const v = input.value;
+    const caret = input.selectionStart;
+    const parts = v.split(SEP).filter(Boolean);
+    // a separator typed at the end becomes ", " so you can keep typing (not when deleting)
+    const out = parts.join(', ') + (typedInsert && parts.length && SEP.test(v.slice(-1)) ? ', ' : '');
+    if (out === v) return;
+    const before = v.slice(0, caret).replace(/[,\s]/g, '').length; // characters (not separators) before the caret
+    input.value = out;
+    let pos = 0, seen = 0;
+    while (pos < out.length && seen < before) { if (!/[,\s]/.test(out[pos])) seen++; pos++; }
+    if (caret >= v.length) pos = out.length;
+    input.setSelectionRange(pos, pos);
+  }
 
-  let pipeline = [];      // operations clicked so far (replayed from Set A every time, so A and B stay live)
-  let activeList = null;  // 'power' | 'prodAB' | 'prodBA' | null
+  /* ---------- expression evaluator (uses the original A and B) ---------- */
+  const OPS = {
+    union: { sym: '∪', fn: (a, b) => new Set([...a, ...b]) },
+    inter: { sym: '∩', fn: (a, b) => new Set([...a].filter(x => b.has(x))) },
+    diff:  { sym: '−', fn: (a, b) => new Set([...a].filter(x => !b.has(x))) },
+    sym:   { sym: 'Δ', fn: (a, b) => new Set([...a, ...b].filter(x => a.has(x) !== b.has(x))) },
+  };
+  const UNION = new Set(['u', '∪', '+']);
+  const INTER = new Set(['n', '∩', '*']);
+  const DIFF  = new Set(['-', '\\', '−', '–']);
+  const SYM   = new Set(['d', 'Δ', '△', '^']);
+
+  function tokenize(src) {
+    const out = [];
+    let i = 0;
+    while (i < src.length) {
+      const ch = src[i];
+      const c = ch.toLowerCase();
+      if (/\s/.test(ch)) { i++; continue; }
+      if (ch === '{') {                                   // a set written directly, e.g. {1, 2}
+        const end = src.indexOf('}', i);
+        if (end < 0) throw Error('Missing closing }');
+        const set = parseSet(src.slice(i + 1, end));
+        out.push({ t: 'set', set, name: show(set) });
+        i = end + 1;
+        continue;
+      }
+      if (ch === '(' || ch === ')') out.push({ t: ch });
+      else if (c === 'a' || c === 'b') out.push({ t: 'set', v: c, name: c.toUpperCase() });
+      else if (UNION.has(c) || UNION.has(ch)) out.push({ t: 'op', v: 'union' });
+      else if (INTER.has(c) || INTER.has(ch)) out.push({ t: 'op', v: 'inter' });
+      else if (DIFF.has(ch)) out.push({ t: 'op', v: 'diff' });
+      else if (SYM.has(c) || SYM.has(ch)) out.push({ t: 'op', v: 'sym' });
+      else throw Error(`Unknown symbol "${ch}"`);
+      i++;
+    }
+    return out;
+  }
+
+  // all operators have equal precedence, evaluated left to right; records each step
+  function evaluate(src, sets) {
+    const toks = tokenize(src);
+    const steps = [];
+    let i = 0;
+
+    function operand() {
+      const tk = toks[i++];
+      if (!tk) throw Error('Expression ended too early');
+      if (tk.t === 'set') return { s: tk.set || sets[tk.v], name: tk.name };
+      if (tk.t === '(') {
+        const v = chain();
+        if (!toks[i] || toks[i].t !== ')') throw Error('Missing closing )');
+        i++;
+        return v;
+      }
+      throw Error('Expected a set or "("');
+    }
+    function chain() {
+      let left = operand();
+      while (toks[i] && toks[i].t === 'op') {
+        const op = OPS[toks[i++].v];
+        const right = operand();
+        const label = `${left.name} ${op.sym} ${right.name}`;
+        const s = op.fn(left.s, right.s);
+        steps.push({ label, value: s });
+        left = { s, name: `(${label})` };
+      }
+      return left;
+    }
+
+    if (!toks.length) throw Error('');
+    const result = chain();
+    if (i < toks.length) throw Error(toks[i].t === ')' ? 'Extra )' : 'Missing operator between sets');
+    return { set: result.s, steps };
+  }
 
   /* ---------- power set and Cartesian product ---------- */
   function powerHtml(cur) {
     const items = sortItems([...cur]);
     const n = items.length;
     const count = n <= 30 ? String(2 ** n) : `2<sup>${n}</sup>`;
-    const head = `<b>P(current)</b> — ${count} subset${n === 0 ? '' : 's'}`;
+    const head = `<b>P(Result)</b> — ${count} subset${n === 0 ? '' : 's'}`;
     if (n > POWER_LIMIT) return `${head}<br>Too many subsets to list. The limit is ${POWER_LIMIT} elements.`;
     let subsets = [[]];
     for (const x of items) subsets = subsets.concat(subsets.map(s => [...s, x]));
@@ -51,123 +132,91 @@
   }
 
   /* ---------- draw everything ---------- */
+  let activeList = null;  // 'power' | 'prodAB' | 'prodBA' | null
+
   function render() {
-    if (!$('set-a') || !$('set-steps')) return;
+    if (!$('set-a') || !$('set-expr')) return;
     const a = parseSet($('set-a').value);
     const b = parseSet($('set-b').value);
-    let cur = a;
-    const rows = [{ label: 'Start (Set A)', value: cur }];
-    for (const key of pipeline) {
-      cur = OPS[key].fn(cur, b);
-      rows.push({ label: OPS[key].label, value: cur });
+    const src = $('set-expr').value.trim();
+
+    // the expression
+    let result = null, steps = [], err = '';
+    if (src) {
+      try { ({ set: result, steps } = evaluate(src, { a, b })); }
+      catch (e) { err = e.message; }
     }
+    $('set-err').textContent = err;
+    $('set-out').textContent = result ? show(result) : '—';
 
-    $('set-out').textContent = show(cur);
+    $('set-steps').innerHTML = steps.length
+      ? '<table><tr><th>Step</th><th>Value</th><th>Size</th></tr>' +
+        steps.map(r => `<tr><td>${esc(r.label)}</td><td>${esc(show(r.value))}</td><td>${r.value.size}</td></tr>`).join('') + '</table>'
+      : '<p class="hint small">Build an expression with at least one operator to see each step.</p>';
 
-    $('set-steps').innerHTML =
-      '<tr><th>Step</th><th>Value</th><th>Size</th></tr>' +
-      rows.map(r => `<tr><td>${esc(r.label)}</td><td>${esc(show(r.value))}</td><td>${r.value.size}</td></tr>`).join('');
-
-    $('set-cur').textContent  = show(cur);
-    $('set-size').textContent = cur.size;
-    $('set-sub').textContent  = yn([...cur].every(x => b.has(x)));
-    $('set-sup').textContent  = yn([...b].every(x => cur.has(x)));
-    $('set-disj').textContent = yn([...cur].every(x => !b.has(x)));
+    $('set-cur').textContent   = result ? show(result) : '—';
+    $('set-size').textContent  = result ? result.size : '—';
+    $('set-sizes').textContent = `${a.size} / ${b.size}`;
+    $('set-sub').textContent   = yn([...a].every(x => b.has(x)));
+    $('set-sup').textContent   = yn([...b].every(x => a.has(x)));
+    $('set-disj').textContent  = yn([...a].every(x => !b.has(x)));
 
     document.querySelectorAll('#set-lists [data-list]').forEach(btn =>
       btn.setAttribute('aria-pressed', String(btn.dataset.list === activeList)));
     const box = $('set-info');
-    if (activeList === 'power')       box.innerHTML = powerHtml(cur);
-    else if (activeList === 'prodAB') box.innerHTML = productHtml(cur, b, 'current × B');
-    else if (activeList === 'prodBA') box.innerHTML = productHtml(b, cur, 'B × current');
+    if (activeList === 'power')       box.innerHTML = result ? powerHtml(result) : '<b>P(Result)</b> — build an expression first.';
+    else if (activeList === 'prodAB') box.innerHTML = productHtml(a, b, 'A × B');
+    else if (activeList === 'prodBA') box.innerHTML = productHtml(b, a, 'B × A');
     box.hidden = !activeList;
-
-    runExpr();
   }
 
-  /* ---------- expression evaluator (uses the original A and B) ---------- */
-  const UNION = new Set(['u', '∪', '+']);
-  const INTER = new Set(['n', '∩', '*']);
-  const DIFF  = new Set(['-', '\\', '−']);
-  const SYM   = new Set(['d', 'Δ', '△', '^']);
-  const EXPR_OPS = { union: OPS.union.fn, inter: OPS.inter.fn, diff: OPS.diffAB.fn, sym: OPS.sym.fn };
-
-  function tokenize(src) {
-    const out = [];
-    for (const ch of src.replace(/\s+/g, '')) {
-      const c = ch.toLowerCase();
-      if (c === '(' || c === ')') out.push({ t: ch });
-      else if (c === 'a' || c === 'b') out.push({ t: 'set', v: c });
-      else if (UNION.has(c) || UNION.has(ch)) out.push({ t: 'op', v: 'union' });
-      else if (INTER.has(c) || INTER.has(ch)) out.push({ t: 'op', v: 'inter' });
-      else if (DIFF.has(ch)) out.push({ t: 'op', v: 'diff' });
-      else if (SYM.has(c) || SYM.has(ch)) out.push({ t: 'op', v: 'sym' });
-      else throw Error(`Unknown symbol "${ch}"`);
-    }
-    return out;
+  /* ---------- the symbol buttons put text into the expression at the cursor ---------- */
+  function insertAtCursor(text) {
+    const el = $('set-expr');
+    const s = el.selectionStart ?? el.value.length, e = el.selectionEnd ?? el.value.length;
+    el.value = el.value.slice(0, s) + text + el.value.slice(e);
+    const pos = text === '{}' ? s + 1 : s + text.length;   // put the cursor inside { }
+    el.focus();
+    el.setSelectionRange(pos, pos);
+    render();
   }
-
-  // all operators have equal precedence, evaluated left to right
-  function evaluate(src, sets) {
-    const toks = tokenize(src);
-    let i = 0;
-    function operand() {
-      const tk = toks[i++];
-      if (!tk) throw Error('Expression ended too early');
-      if (tk.t === 'set') return sets[tk.v];
-      if (tk.t === '(') {
-        const v = chain();
-        if (!toks[i] || toks[i].t !== ')') throw Error('Missing closing )');
-        i++;
-        return v;
-      }
-      throw Error('Expected a set or "("');
+  function backspace() {
+    const el = $('set-expr');
+    const s = el.selectionStart ?? el.value.length, e = el.selectionEnd ?? s;
+    let from = s;
+    if (s !== e) from = s;                                   // something is selected: remove just that
+    else {
+      const m = el.value.slice(0, s).match(/ ?[∪∩−Δ] ?$|[\s\S]$/);  // a whole " ∪ " goes at once, otherwise one character
+      from = m ? s - m[0].length : s;
     }
-    function chain() {
-      let left = operand();
-      while (toks[i] && toks[i].t === 'op') {
-        const op = toks[i++].v;
-        left = EXPR_OPS[op](left, operand());
-      }
-      return left;
-    }
-    const result = chain();
-    if (i < toks.length) throw Error(toks[i].t === ')' ? 'Extra )' : 'Missing operator between sets');
-    return result;
-  }
-
-  function runExpr() {
-    const box = $('set-expr');
-    const out = $('set-expr-out');
-    if (!box || !out) return;
-    const src = box.value.trim();
-    if (!src) { out.innerHTML = '<p class="hint">Type an expression using A and B.</p>'; return; }
-    try {
-      const r = evaluate(src, { a: parseSet($('set-a').value), b: parseSet($('set-b').value) });
-      out.innerHTML =
-        `<div class="kv"><span>Expression</span><b>${esc(src)}</b></div>` +
-        `<div class="kv"><span>Result</span><b>${esc(show(r))}</b></div>` +
-        `<div class="kv"><span>Size</span><b>${r.size}</b></div>`;
-    } catch (e) {
-      out.innerHTML = `<p class="err">${esc(e.message)}</p>`;
-    }
+    el.value = el.value.slice(0, from) + el.value.slice(e);
+    el.focus();
+    el.setSelectionRange(from, from);
+    render();
   }
 
   /* ---------- events (delegated, so load order doesn't matter) ---------- */
   document.addEventListener('click', e => {
-    const op = e.target.closest('#set-ops [data-op]');
-    if (op) { pipeline.push(op.dataset.op); render(); return; }
+    const ins = e.target.closest('#page-set [data-ins]');
+    if (ins) { insertAtCursor(ins.dataset.ins); return; }
+    const act = e.target.closest('#page-set [data-act]');
+    if (act) {
+      if (act.dataset.act === 'back') backspace();
+      if (act.dataset.act === 'clear') { $('set-expr').value = ''; $('set-expr').focus(); render(); }
+      return;
+    }
     const list = e.target.closest('#set-lists [data-list]');
     if (list) {
       activeList = activeList === list.dataset.list ? null : list.dataset.list; // click again to hide
       render();
-      return;
     }
-    if (e.target.closest('#set-undo'))  { pipeline.pop(); render(); }
-    if (e.target.closest('#set-reset')) { pipeline = []; render(); }
   });
   document.addEventListener('input', e => {
-    if (['set-a', 'set-b', 'set-expr'].includes(e.target.id)) render();
+    if (e.target.classList && e.target.classList.contains('set-in')) {
+      tidy(e.target, !(e.inputType || '').startsWith('delete'));
+      render();
+    }
+    if (e.target.id === 'set-expr') render();
   });
 
   render();

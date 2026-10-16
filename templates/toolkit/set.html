@@ -1,59 +1,67 @@
 <section id="page-set" class="page">
   <div class="text-tool">
     <div class="card">
-      <div class="field"><label for="set-a">Set A</label><input id="set-a" placeholder="e.g. 1, 2, 3 (commas or spaces)" autocomplete="off"></div>
-      <div class="field"><label for="set-b">Set B</label><input id="set-b" placeholder="e.g. 3, 4" autocomplete="off"></div>
+      <div class="field">
+        <label for="set-a">Set A</label>
+        <div class="brace-input"><span>{</span><input id="set-a" class="set-in" placeholder="1, 2, 3" autocomplete="off"><span>}</span></div>
+      </div>
+      <div class="field">
+        <label for="set-b">Set B</label>
+        <div class="brace-input"><span>{</span><input id="set-b" class="set-in" placeholder="3, 4" autocomplete="off"><span>}</span></div>
+      </div>
 
       <div class="field">
-        <label for="set-out">Output (Set A)</label>
-        <div id="set-out" class="out-box" aria-live="polite"></div>
+        <label for="set-expr">Expression</label>
+        <input id="set-expr" placeholder="e.g. (A ∪ B) Δ A" autocomplete="off">
       </div>
 
-      <div class="btn-row" id="set-ops">
-        <button data-op="union">Union (A ∪ B)</button>
-        <button data-op="inter">Intersection (A ∩ B)</button>
-        <button data-op="diffAB">Difference (A − B)</button>
-        <button data-op="diffBA">Difference (B − A)</button>
-        <button data-op="sym">Symmetric diff (A Δ B)</button>
+      <div class="btn-row" id="set-palette">
+        <button data-ins=" ∪ " title="Union">∪ Union</button>
+        <button data-ins=" ∩ " title="Intersection">∩ Intersection</button>
+        <button data-ins=" − " title="Difference">− Difference</button>
+        <button data-ins=" Δ " title="Symmetric difference">Δ Sym. diff</button>
       </div>
       <div class="btn-row">
-        <button id="set-undo">Undo</button>
-        <button id="set-reset">Reset</button>
+        <button data-ins="A">A</button>
+        <button data-ins="B">B</button>
+        <button data-ins="(">(</button>
+        <button data-ins=")">)</button>
+        <button data-ins="{}" title="Write a set directly, e.g. {1, 2}">{ }</button>
+        <button data-act="back" title="Delete one character">⌫</button>
+        <button data-act="clear">Clear</button>
       </div>
+      <div id="set-err" class="err"></div>
+
+      <div class="field" style="margin-top:14px">
+        <label for="set-out">Result</label>
+        <div id="set-out" class="out-box" aria-live="polite"></div>
+      </div>
+      <p class="hint small">Operators are worked out left to right, so use ( ) to group.</p>
     </div>
 
     <div class="card">
       <h3>Steps</h3>
-      <table id="set-steps"></table>
+      <div id="set-steps"></div>
     </div>
 
     <div class="card">
       <h3>Result</h3>
-      <div class="kv"><span>Current</span><b id="set-cur"></b></div>
+      <div class="kv"><span>Result</span><b id="set-cur"></b></div>
       <div class="kv"><span>Size</span><b id="set-size"></b></div>
-      <div class="kv"><span>⊆ B</span><b id="set-sub"></b></div>
-      <div class="kv"><span>⊇ B</span><b id="set-sup"></b></div>
-      <div class="kv"><span>Disjoint from B</span><b id="set-disj"></b></div>
+      <div class="kv"><span>|A| / |B|</span><b id="set-sizes"></b></div>
+      <div class="kv"><span>A ⊆ B</span><b id="set-sub"></b></div>
+      <div class="kv"><span>A ⊇ B</span><b id="set-sup"></b></div>
+      <div class="kv"><span>Disjoint</span><b id="set-disj"></b></div>
     </div>
 
     <div class="card">
       <h3>Power set &amp; Cartesian product</h3>
       <div class="btn-row" id="set-lists">
-        <button data-list="power" aria-pressed="false">Power set</button>
-        <button data-list="prodAB" aria-pressed="false">Product (× B)</button>
-        <button data-list="prodBA" aria-pressed="false">Product (B ×)</button>
+        <button data-list="power" aria-pressed="false">P(Result)</button>
+        <button data-list="prodAB" aria-pressed="false">A × B</button>
+        <button data-list="prodBA" aria-pressed="false">B × A</button>
       </div>
       <div id="set-info" class="info-box" hidden></div>
-    </div>
-
-    <div class="card">
-      <h3>Expression</h3>
-      <div class="field">
-        <label for="set-expr">Uses the original sets A and B</label>
-        <input id="set-expr" placeholder="e.g. (A u B) Δ A" autocomplete="off">
-      </div>
-      <p class="hint small">Union: u ∪ + &nbsp;|&nbsp; Intersection: n ∩ * &nbsp;|&nbsp; Difference: - \ &nbsp;|&nbsp; Sym. diff: Δ d ^</p>
-      <div id="set-expr-out"><p class="hint">Type an expression using A and B.</p></div>
     </div>
   </div>
 </section>
