@@ -21,13 +21,16 @@ if (regexSection) { // only run when this page exists in the HTML
 
   function renderRegex(data) { // build the results card from Python's answer
     let rows = ''; // the HTML for all paths
-    data.paths.forEach((path, index) => { // one row per path
-      rows += `<div class="regex-group"><b>path ${index + 1}<small>${esc(path.path)}</small></b><div class="regex-words">`; // start the row with the path's shape
+    const several = data.paths.length > 1; // only label the rows when "|" made more than one path
+    for (const path of data.paths) { // one row per path
+      rows += `<div class="regex-group${several ? '' : ' single'}">`; // start the row
+      if (several) rows += `<code>${esc(path.path)}</code>`; // the path's expression, shown only when there are several paths
+      rows += '<div class="regex-words">'; // the strings of this path
       for (const word of path.words) { // every string of this path, in iteration order
         rows += `<span>${word === '' ? 'ε' : esc(word)}</span>`; // ε stands for the empty string
       }
       rows += '</div></div>'; // end the row
-    });
+    }
     let anyEmpty = false; // does any path give the empty string?
     for (const path of data.paths) { // check every path
       if (path.words.includes('')) anyEmpty = true; // found one

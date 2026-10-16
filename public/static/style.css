@@ -56,12 +56,12 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 .regex-chips button:hover{border-color:var(--acc);color:var(--acc)}
 .regex-len{display:flex;align-items:center;gap:12px;margin-top:14px;color:var(--mute);font-size:.9rem}
 .regex-len input{flex:1;width:auto;padding:0;accent-color:var(--acc)}
-.regex-read{font-family:ui-monospace,Consolas,monospace;color:var(--acc);margin:0 0 4px;word-break:break-word}
+.regex-read{font-family:ui-monospace,Consolas,monospace;font-size:1.5rem;letter-spacing:.06em;color:var(--acc);margin:0 0 6px;word-break:break-word}
 .regex-meta{color:var(--mute);font-size:.9rem;margin:0 0 8px}
 .regex-error{color:var(--bad);margin:0}
-.regex-group{display:grid;grid-template-columns:minmax(76px,150px) 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
-.regex-group b{color:var(--mute);font-size:.85rem;font-weight:600;padding-top:3px}
-.regex-group b small{display:block;font:400 .8rem ui-monospace,Consolas,monospace;color:var(--acc);word-break:break-word}
+.regex-group{display:grid;grid-template-columns:minmax(110px,190px) 1fr;gap:8px 14px;padding:8px 0;border-top:1px solid var(--line)}
+.regex-group.single{grid-template-columns:1fr}
+.regex-group code{font:600 1.15rem ui-monospace,Consolas,monospace;letter-spacing:.06em;color:var(--acc);word-break:break-word}
 .regex-words{display:flex;flex-wrap:wrap;gap:6px}
 .regex-words span{font-family:ui-monospace,Consolas,monospace;background:#262635;border:1px solid var(--line);border-radius:6px;padding:2px 8px;word-break:break-all}
 .regex-legend dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:.9rem;color:var(--mute)}
@@ -81,34 +81,34 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 
 /* ---------- Text Operations page ---------- */
 .text-tool .card {
-  background: #272a3c;
-  border: 1px solid #3a3e55;
-  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 20px 24px;
   margin: 0 auto 20px;
   width: 100%;
   max-width: 640px;
   box-sizing: border-box;
 }
-.text-tool .card h3 { margin: 0 0 14px; color: #b9a2f0; font-size: 1rem; }
+.text-tool .card h3 { margin: 0 0 14px; color: var(--acc); font-size: 1rem; }
 
 .text-tool .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.text-tool .field label { font-size: .8rem; font-weight: 600; color: #aab0c8; }
+.text-tool .field label { font-size: .8rem; font-weight: 600; color: var(--mute); }
 
 .text-tool .card input,
 .text-tool .card select {
-  background: #1f2130; color: #e6e8f2;
-  border: 1px solid #3a3e55; border-radius: 8px;
+  background: #262635; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px;
   padding: 10px 12px; font: inherit; width: 100%; box-sizing: border-box;
 }
 .text-tool .card input:focus,
-.text-tool .card select:focus { outline: 2px solid #b9a2f0; border-color: transparent; }
+.text-tool .card select:focus { outline: 2px solid var(--acc); border-color: transparent; }
 
 .text-tool .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .text-tool .btn-row + .btn-row { margin-top: 10px; }
 .text-tool .card button {
-  background: #272a3c; color: #e6e8f2;
-  border: 1px solid #3a3e55; border-radius: 8px;
+  background: #262635; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px;
   padding: 9px 16px; font-weight: 600; cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
 }
@@ -116,62 +116,62 @@ pre{background:#fafcfd;border:1px solid var(--line);border-radius:8px;padding:10
 .text-tool .card button:active,
 .text-tool .card button:focus-visible,
 .text-tool .card button[aria-pressed="true"] {
-  background: #b9a2f0; color: #1b1d2b; border-color: #b9a2f0;
+  background: #262635; color: var(--acc); border-color: var(--acc);
 }
 
 .text-tool .out-box {
-  background: #1f2130; color: #e6e8f2;
-  border: 1px solid #3a3e55; border-radius: 8px;
+  background: #262635; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px;
   padding: 10px 12px; min-height: 1.5em;
   font-family: ui-monospace, monospace; overflow-wrap: anywhere;
 }
 .text-tool .info-box {
   margin-top: 14px; padding: 10px 12px; border-radius: 8px;
-  background: #1f2130; border: 1px solid #3a3e55; color: #aab0c8;
+  background: #262635; border: 1px solid var(--line); color: var(--mute);
   font-family: ui-monospace, monospace; font-size: .9rem; overflow-wrap: anywhere;
 }
-.text-tool .info-box b { color: #e6e8f2; font-family: inherit; }
+.text-tool .info-box b { color: var(--ink); font-family: inherit; }
 .text-tool .info-box .chip-list { margin-top: 10px; }
 .text-tool .info-box[hidden] { display: none; }
 
 .text-tool #steps { width: 100%; border-collapse: collapse; margin-top: 0; }
 .text-tool #steps th,
-.text-tool #steps td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #3a3e55; }
-.text-tool #steps th { width: auto; color: #aab0c8; font-size: .8rem; }
+.text-tool #steps td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+.text-tool #steps th { width: auto; color: var(--mute); font-size: .8rem; }
 .text-tool #steps td { font-family: ui-monospace, monospace; }
 
 .text-tool .kv {
   display: grid; grid-template-columns: 130px 1fr; gap: 12px;
-  padding: 10px 0; border-bottom: 1px solid #3a3e55; align-items: baseline;
+  padding: 10px 0; border-bottom: 1px solid var(--line); align-items: baseline;
 }
 .text-tool .kv:last-of-type { border-bottom: 0; }
-.text-tool .kv span { color: #aab0c8; font-size: .85rem; font-weight: 600; }
+.text-tool .kv span { color: var(--mute); font-size: .85rem; font-weight: 600; }
 .text-tool .kv b {
-  color: #e6e8f2; font-weight: 500; font-family: ui-monospace, monospace;
+  color: var(--ink); font-weight: 500; font-family: ui-monospace, monospace;
   overflow-wrap: anywhere;
 }
 
-.text-tool .err { color: #ff8a8a; font-size: .85rem; min-height: 1em; }
+.text-tool .err { color: var(--bad); font-size: .85rem; min-height: 1em; }
 
 .text-tool .brace-input {
   display: flex; align-items: center; gap: 8px;
-  background: #1f2130; border: 1px solid #3a3e55; border-radius: 8px; padding: 0 12px;
+  background: #262635; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px;
 }
-.text-tool .brace-input:focus-within { outline: 2px solid #b9a2f0; border-color: transparent; }
-.text-tool .brace-input span { color: #b9a2f0; font-family: ui-monospace, monospace; font-size: 1.25rem; font-weight: 600; }
+.text-tool .brace-input:focus-within { outline: 2px solid var(--acc); border-color: transparent; }
+.text-tool .brace-input span { color: var(--acc); font-family: ui-monospace, monospace; font-size: 1.25rem; font-weight: 600; }
 .text-tool .card .brace-input input {
   border: 0; background: transparent; padding: 10px 0; outline: none;
   font-family: ui-monospace, monospace;
 }
 .text-tool #set-steps table { margin-top: 0; }
 .text-tool #set-steps th,
-.text-tool #set-steps td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #3a3e55; }
-.text-tool #set-steps th { width: auto; color: #aab0c8; font-size: .8rem; }
+.text-tool #set-steps td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+.text-tool #set-steps th { width: auto; color: var(--mute); font-size: .8rem; }
 .text-tool #set-steps td { font-family: ui-monospace, monospace; }
 .text-tool #set-steps table { width: 100%; border-collapse: collapse; }
 .text-tool .hint.small { margin-top: 10px; }
 .text-tool .card button:disabled {
-  background: #272a3c; color: #e6e8f2; border-color: #3a3e55; opacity: .4; cursor: not-allowed;
+  background: #262635; color: var(--ink); border-color: var(--line); opacity: .4; cursor: not-allowed;
 }
-.text-tool .info-box .basis { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #3a3e55; color: #aab0c8; }
-.text-tool .info-box .basis b { color: #b9a2f0; }
+.text-tool .info-box .basis { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); color: var(--mute); }
+.text-tool .info-box .basis b { color: var(--acc); }
