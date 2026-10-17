@@ -1,13 +1,14 @@
 <section id="page-tree" class="page active">
-  <p class="hint">Type an <strong>infix</strong> expression (e.g. <code>A+B/D-E</code>) and press Enter (or Build). Then choose which traversal to show &mdash; switching the output updates instantly.</p>
   <p id="tree-error" role="alert"></p>
 
   <div class="tree-controls">
     <div class="tree-entry">
-      <input id="tree-input" placeholder="A+B/D-E" aria-label="Infix expression">
+      <input id="tree-input" placeholder="e.g. A+B/D-E  or  - + A / B D E  or  A B D / + E -" aria-label="Expression (infix, prefix or postfix)">
       <button type="button" id="tree-build">Build</button>
     </div>
   </div>
+
+  <p id="tree-detected" class="tree-detected"></p>
 
   <div class="tree-controls">
     <span class="tree-label">Show output as</span>

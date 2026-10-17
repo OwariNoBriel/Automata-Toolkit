@@ -71,7 +71,7 @@ The JavaScript files only send input to Python and draw what comes back.
 ## Features
 
 ### Binary Tree
-- Type an infix arithmetic expression such as `A+B/D-E`
+- Type an expression in prefix, infix or postfix, e.g. `A+B/D-E`, `- + A / B D E` or `A B D / + E -`; the format is detected automatically
 - Switch the output between preorder, inorder and postorder at any time; the expression tree is redrawn with that order's visit numbers
 
 ### Text Operations
