@@ -137,6 +137,7 @@ if (treeSection) { // only run when this page exists in the HTML
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'That expression is not valid.');
       data = result; // keep the answer so switching the output needs no new request
+      outputKind = kind; // jump to the matching tab: prefix -> Preorder, infix -> Inorder, postfix -> Postorder
       detected.textContent = 'Detected input: ' + kinds[kind].name + ' (' + kinds[kind].alias + ')'; // tell the user what was recognised
       render();
     } catch (error) {
