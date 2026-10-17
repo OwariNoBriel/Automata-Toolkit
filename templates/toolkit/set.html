@@ -1,17 +1,77 @@
 <section id="page-set" class="page">
-  <div class="input">
-    <label>Set A <input id="set-a" placeholder="e.g. 1, 2, 3 (commas or spaces)" autocomplete="off"></label>
-    <label>Set B <input id="set-b" placeholder="e.g. 3, 4" autocomplete="off"></label>
-    <button id="set-run">Run</button>
-  </div>
+  <div class="text-tool">
+    <div class="card">
+      <div id="set-fields">
+        <div class="field">
+          <label for="set-a">Set A</label>
+          <div class="brace-input"><span>{</span><input id="set-a" class="set-in" placeholder="1, 2, 3" autocomplete="off"><span>}</span></div>
+        </div>
+        <div class="field">
+          <label for="set-b">Set B</label>
+          <div class="brace-input"><span>{</span><input id="set-b" class="set-in" placeholder="3, 4" autocomplete="off"><span>}</span></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button id="set-add">+ Add set</button>
+        <button id="set-remove">− Remove last set</button>
+      </div>
 
-  <div class="input" style="margin-top:0">
-    <label>Expression
-      <input id="set-expr" placeholder="e.g. (A u B) Δ A" autocomplete="off">
-    </label>
-    <p class="hint small">Sets: A, B &nbsp;|&nbsp; Union: u ∪ + &nbsp;|&nbsp; Intersection: n ∩ * &nbsp;|&nbsp; Difference: - \ &nbsp;|&nbsp; Sym. diff: Δ d ^</p>
-    <div id="set-expr-out"><p class="hint">Type an expression using A and B.</p></div>
-  </div>
+      <div class="field" style="margin-top:20px">
+        <label for="set-expr">Expression</label>
+        <input id="set-expr" placeholder="e.g. (A ∪ B) Δ A" autocomplete="off">
+      </div>
 
-  <div id="set-output"><p class="hint">Enter two sets and press Run.</p></div>
+      <div class="btn-row" id="set-palette">
+        <button data-ins=" ∪ " title="Union">∪ Union</button>
+        <button data-ins=" ∩ " title="Intersection">∩ Intersection</button>
+        <button data-ins=" − " title="Difference">− Difference</button>
+        <button data-ins=" Δ " title="Symmetric difference">Δ Sym. diff</button>
+      </div>
+      <div class="btn-row">
+        <span id="set-name-btns" style="display:contents"></span>
+        <button data-ins="(">(</button>
+        <button data-ins=")">)</button>
+        <button data-ins="{}" title="Write a set directly, e.g. {1, 2}">{ }</button>
+        <button data-act="back" title="Delete one character">⌫</button>
+        <button data-act="clear">Clear</button>
+      </div>
+      <div id="set-err" class="err"></div>
+
+      <div class="field" style="margin-top:14px">
+        <label for="set-out">Result</label>
+        <div id="set-out" class="out-box" aria-live="polite"></div>
+      </div>
+      <p class="hint small">Operators are worked out left to right, so use ( ) to group.</p>
+    </div>
+
+    <div class="card">
+      <h3>Steps</h3>
+      <div id="set-steps"></div>
+    </div>
+
+    <div class="card">
+      <h3>Result</h3>
+      <div class="kv"><span>Result</span><b id="set-cur"></b></div>
+      <div class="kv"><span>Size</span><b id="set-size"></b></div>
+      <div class="kv"><span>Set sizes</span><b id="set-sizes"></b></div>
+      <div class="kv"><span>A ⊆ B</span><b id="set-sub"></b></div>
+      <div class="kv"><span>A ⊇ B</span><b id="set-sup"></b></div>
+      <div class="kv"><span>A, B disjoint</span><b id="set-disj"></b></div>
+    </div>
+
+    <div class="card">
+      <h3>Power set &amp; Cartesian product</h3>
+      <p class="hint small" style="margin:0 0 12px">These are built from the Result above.</p>
+      <div class="field">
+        <label for="set-pair">Pair the Result with</label>
+        <select id="set-pair"></select>
+      </div>
+      <div class="btn-row" id="set-lists">
+        <button data-list="power" aria-pressed="false">P(Result)</button>
+        <button data-list="prodRX" aria-pressed="false" id="set-prod-rx">Result × B</button>
+        <button data-list="prodXR" aria-pressed="false" id="set-prod-xr">B × Result</button>
+      </div>
+      <div id="set-info" class="info-box" hidden></div>
+    </div>
+  </div>
 </section>

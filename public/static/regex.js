@@ -9,38 +9,37 @@ if (regexSection) { // only run when this page exists in the HTML
 
   const regexInputs = { // the page elements we talk to
     expr: document.getElementById('regex-input'), // the expression box
-    max: document.getElementById('regex-max'), // the max-length slider
+    max: document.getElementById('regex-max'), // the iterations slider
     maxValue: document.getElementById('regex-max-value'), // the number shown beside the slider
     chips: document.getElementById('regex-chips'), // where the example buttons go
     output: document.getElementById('regex-output') // where results appear
   };
 
-  const EXAMPLES = ['A+BC', 'A*B', '(AB)+', 'A|BC', '(A|B)*C', '(AB|C)+D', 'A(B|C)*']; // one button per example
+  const EXAMPLES = ['A+B', 'A+BC', 'A*B', '(AB)+', 'A|BC', '(A|B)*C+', '(A|B)+C+', '(AB|C)+D', 'A(B|C)*']; // one button per example
   let timer = null; // used to wait a moment after typing stops
   let latest = 0; // the number of the newest request, so old answers can be ignored
 
   function renderRegex(data) { // build the results card from Python's answer
-    const groups = {}; // the strings collected by their length
-    for (const word of data.words) { // go through every string
-      if (!groups[word.length]) groups[word.length] = []; // the first string of a length starts a new group
-      groups[word.length].push(word); // file the string under its length
-    }
-    let rows = ''; // the HTML for all groups
-    for (const len of Object.keys(groups)) { // one row per length, shortest first
-      const label = len === '0' ? 'empty' : 'length ' + len; // the empty string gets the label "empty"
-      rows += `<div class="regex-group"><b>${label}</b><div class="regex-words">`; // start the row
-      for (const word of groups[len]) { // every string of this length
+    let rows = ''; // the HTML for all paths
+    const several = data.paths.length > 1; // only label the rows when "|" made more than one path
+    for (const path of data.paths) { // one row per path
+      rows += `<div class="regex-group${several ? '' : ' single'}">`; // start the row
+      if (several) rows += `<code>${esc(path.path)}</code>`; // the path's expression, shown only when there are several paths
+      rows += '<div class="regex-words">'; // the strings of this path
+      for (const word of path.words) { // every string of this path, in iteration order
         rows += `<span>${word === '' ? 'ε' : esc(word)}</span>`; // ε stands for the empty string
       }
       rows += '</div></div>'; // end the row
     }
-    const plural = data.count === 1 ? '' : 's'; // "1 string" but "4 strings"
-    const empty = data.words.includes('') ? ' (ε = the empty string)' : ''; // explain ε when it appears
-    let html = `<p class="regex-read">${esc(data.read)}</p>`; // how the operators were grouped
-    html += `<p class="regex-meta">${data.count}${data.capped ? '+' : ''} string${plural} up to length ${data.max_len}${empty}</p>`; // the summary
-    if (rows === '') { // no string fits within the limit
-      html += `<p class="regex-meta">No strings fit within length ${data.max_len}. Try a larger max length.</p>`; // say so
+    let anyEmpty = false; // does any path give the empty string?
+    for (const path of data.paths) { // check every path
+      if (path.words.includes('')) anyEmpty = true; // found one
     }
+    const plural = data.count === 1 ? '' : 's'; // "1 string" but "4 strings"
+    const pathPlural = data.paths.length === 1 ? '' : 's'; // "1 path" but "2 paths"
+    const empty = anyEmpty ? ' (ε = the empty string)' : ''; // explain ε when it appears
+    let html = `<p class="regex-read">${esc(data.read)}</p>`; // how the operators were grouped
+    html += `<p class="regex-meta">${data.count}${data.capped ? '+' : ''} string${plural} over ${data.paths.length} path${pathPlural}, up to ${data.iterations} iteration${data.iterations === 1 ? '' : 's'}${empty}</p>`; // the summary
     return html + rows; // the summary followed by the rows
   }
 
@@ -54,7 +53,7 @@ if (regexSection) { // only run when this page exists in the HTML
     const response = await fetch('/api/regex', { // ask the server
       method: 'POST', // we are sending data
       headers: { 'Content-Type': 'application/json' }, // the data is JSON
-      body: JSON.stringify({ regex: regexInputs.expr.value, max_len: Number(regexInputs.max.value) }) // expression and length limit
+      body: JSON.stringify({ regex: regexInputs.expr.value, iterations: Number(regexInputs.max.value) }) // expression and iteration count
     });
     const data = await response.json(); // read the answer
     if (mine !== latest) return; // a newer request exists, so drop this old answer

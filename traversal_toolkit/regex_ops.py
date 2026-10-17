@@ -6,12 +6,19 @@ Operators (highest precedence first):
           concatenation (implicit: 'ab' = a then b)
     |     alternation (union)
 Any other character is a literal symbol.  Use \\ to escape an operator ( \\* ).
+
+Generation is a depth-first derivation along ONE path at a time, counted in iterations (not string length):
+    - each "|" is settled once per path, so (A|B)*C+ has two paths: the A path and the B path
+    - on iteration j, every "+" repeats its part j times and every "*" repeats its part j-1 times
+      (so A+B gives AB, AAB, AAAB ... and (A|B)*C+ gives C, ACC, AACCC ... then C, BCC, BBCCC ...)
 """  # what this file is for
-from .basics import contains, join, length, merge_sort  # our own helpers instead of built-in shortcuts
+from .basics import contains, join, length  # our own helpers instead of built-in shortcuts
 
 META = "|*+()"  # the characters that are operators, not letters
-CAP = 2000  # stop collecting after this many strings (keeps the page fast)
-MAX_LEN_LIMIT = 10  # the longest string length we ever generate
+MAX_ITER_LIMIT = 10  # the most iterations we ever run
+DEFAULT_ITER = 4  # iterations used when none (or an unreadable one) is given
+MAX_PATHS = 64  # stop listing paths after this many (keeps the page fast)
+MAX_WORD_LEN = 2000  # a string longer than this ends its path (keeps the page fast)
 
 
 def _is_space(ch):  # is this character blank space?
@@ -141,103 +148,94 @@ def describe(n):  # readable form showing the grouping, e.g. 'A+ · B · C'
     return inner + "+"  # Kleene plus: one or more
 
 
-# ---------- generation: expression -> the strings it produces ----------
+# ---------- generation: expression -> one derivation per path ----------
 
-class Language:  # a collection of distinct strings, stored in boxes by length
-    def __init__(self, limit):  # make an empty collection for strings up to length limit
-        self.limit = limit  # the longest string we keep
-        self.boxes = []  # boxes[k] holds the strings of length k
-        for _ in range(limit + 1):  # one box for each length 0, 1, 2 ... limit
-            self.boxes.append([])  # start with an empty box
-        self.seen = {}  # a quick "already stored?" lookup table (words as keys)
-        self.count = 0  # how many strings are stored
-
-    def add(self, word, size):  # store a string of the given length unless we already have it
-        if size > self.limit or self.count >= CAP:  # too long, or we are full
-            return False  # do not store it
-        if word in self.seen:  # we already have this exact string
-            return False  # do not store it twice
-        self.seen[word] = True  # remember that we have it
-        self.boxes[size].append(word)  # put it in the box for its length
-        self.count += 1  # one more string stored
-        return True  # it was new
-
-
-def _join(xs, ys, limit):  # concatenation: every string of xs followed by every string of ys
-    out = Language(limit)  # the answer collection
-    for lx in range(limit + 1):  # for each possible length of the first part
-        for ly in range(limit - lx + 1):  # and each length of the second part that still fits
-            for x in xs.boxes[lx]:  # every first part of that length
-                for y in ys.boxes[ly]:  # every second part of that length
-                    out.add(x + y, lx + ly)  # glue them together and store the result
-    return out  # all the joined strings
+def _paths(n):  # every way of settling the "|" choices: syntax trees with no alternation left
+    k = n[0]  # which kind of node this is
+    if k == "sym":  # a single symbol has only one way
+        return [n]  # just itself
+    if k == "alt":  # a choice: each branch starts its own paths
+        out = []  # the answer list
+        for branch in _paths(n[1]):  # paths through the left branch
+            out.append(branch)  # keep each one
+        for branch in _paths(n[2]):  # paths through the right branch
+            out.append(branch)  # keep each one
+        return out  # left paths first, then right paths
+    if k == "cat":  # concatenation: every left path meets every right path
+        out = []  # the answer list
+        for left in _paths(n[1]):  # each way through the left part
+            for right in _paths(n[2]):  # each way through the right part
+                if length(out) < MAX_PATHS:  # stay under the limit
+                    out.append(("cat", left, right))  # one combined path
+        return out  # all the combined paths
+    out = []  # star / plus: the choice inside is made once and reused every iteration
+    for body in _paths(n[1]):  # each way through the repeated part
+        out.append((k, body))  # wrap it back in its star or plus
+    return out  # one path for each way through the body
 
 
-def _union(xs, ys, limit):  # alternation: strings from xs or from ys
-    out = Language(limit)  # the answer collection
-    for k in range(limit + 1):  # go through every length
-        for word in xs.boxes[k]:  # every string from the left side
-            out.add(word, k)  # store it
-        for word in ys.boxes[k]:  # every string from the right side
-            out.add(word, k)  # store it (strings already stored are skipped)
-    return out  # all strings from either side
+def _repeats(n):  # does this tree contain a star or a plus anywhere?
+    if n[0] == "sym":  # a symbol never repeats
+        return False  # no
+    if n[0] == "star" or n[0] == "plus":  # a repetition mark
+        return True  # yes
+    return _repeats(n[1]) or _repeats(n[2])  # cat: look at both sides
 
 
-def _star(xs, limit):  # Kleene star: repeat zero, one, two ... times
-    out = Language(limit)  # the answer collection
-    out.add("", 0)  # repeating zero times gives the empty string
-    frontier = [("", 0)]  # the strings found in the latest round
-    while length(frontier) > 0 and out.count < CAP:  # keep going while new strings appear
-        found = []  # the new strings of this round
-        for word, wsize in frontier:  # extend each string of the last round
-            for k in range(1, limit - wsize + 1):  # by one more repeat of length k (it must still fit)
-                for x in xs.boxes[k]:  # every string that may be repeated
-                    if out.add(word + x, wsize + k):  # glue one more repeat on
-                        found.append((word + x, wsize + k))  # a new string: extend it again next round
-        frontier = found  # the next round starts from the new strings
-    return out  # every repeat count that fits in the limit
-
-
-def _lang(n, limit):  # the strings a syntax tree produces, up to length limit
+def _derive(n, j):  # the string this path gives on iteration j (j = 1, 2, 3 ...)
     k = n[0]  # which kind of node this is
     if k == "sym":  # a single symbol
-        out = Language(limit)  # the answer collection
-        out.add(n[1], 1)  # the only string is that symbol (length 1)
-        return out  # done
+        return n[1]  # it is written once
     if k == "cat":  # concatenation
-        return _join(_lang(n[1], limit), _lang(n[2], limit), limit)  # left strings followed by right strings
-    if k == "alt":  # alternation
-        return _union(_lang(n[1], limit), _lang(n[2], limit), limit)  # left strings or right strings
-    base = _lang(n[1], limit)  # star / plus: the strings that get repeated
-    repeated = _star(base, limit)  # zero or more repeats of them
-    if k == "star":  # Kleene star
-        return repeated  # zero or more repeats
-    return _join(base, repeated, limit)  # Kleene plus: one copy, then zero or more repeats
+        return _derive(n[1], j) + _derive(n[2], j)  # left string then right string
+    body = _derive(n[1], j)  # star / plus: the part that gets repeated
+    times = j - 1  # a star repeats j-1 times (zero times on the first iteration)
+    if k == "plus":  # a plus repeats j times (at least once)
+        times = j  # one more than a star
+    text = ""  # the repeated text built so far
+    for _ in range(times):  # one copy of the body for every repeat
+        text = text + body  # glue another copy on
+    return text  # the repeated text
 
 
-def _before(x, y):  # alphabetical order for two strings of the same length
-    return x < y  # compare letter by letter
-
-
-def generate(regex, max_len=6):  # all strings the expression produces up to max_len, shortest first
-    try:  # the length may arrive as text or a number
-        max_len = int(max_len)  # turn it into a whole number
+def generate(regex, iterations=DEFAULT_ITER):  # one depth-first derivation per path, one string per iteration
+    try:  # the iteration count may arrive as text or a number
+        iterations = int(iterations)  # turn it into a whole number
     except (TypeError, ValueError):  # it could not be read
-        max_len = 6  # fall back to the default
-    if max_len > MAX_LEN_LIMIT:  # asked for too long
-        max_len = MAX_LEN_LIMIT  # cap it
-    if max_len < 1:  # asked for too short
-        max_len = 1  # raise it
+        iterations = DEFAULT_ITER  # fall back to the default
+    if iterations > MAX_ITER_LIMIT:  # asked for too many
+        iterations = MAX_ITER_LIMIT  # cap it
+    if iterations < 1:  # asked for too few
+        iterations = 1  # raise it
     tree = parse(regex)  # read the expression (raises ValueError if malformed)
-    language = _lang(tree, max_len)  # work out every string that fits
-    words = []  # the final list, shortest first
-    for k in range(max_len + 1):  # go through the lengths in order
-        for word in merge_sort(language.boxes[k], _before):  # strings of this length, alphabetical
-            words.append(word)  # add to the final list
+    paths = []  # the finished paths, in order
+    seen = []  # the paths already listed, so equal ones are not shown twice
+    total = 0  # how many strings there are over all paths
+    capped = False  # becomes True if we stopped early
+    for path in _paths(tree):  # follow each path on its own
+        label = describe(path)  # how this path reads, e.g. 'A* · C+'
+        if contains(seen, label):  # an identical path was already listed
+            continue  # skip the repeat
+        seen.append(label)  # remember it
+        words = []  # the strings of this path, one per iteration
+        if _repeats(path):  # the path loops, so run it iteration by iteration
+            for j in range(1, iterations + 1):  # iteration 1, 2, 3 ...
+                word = _derive(path, j)  # the string for this iteration
+                if length(word) > MAX_WORD_LEN:  # it grew too large
+                    capped = True  # tell the page we stopped early
+                    break  # end this path
+                if not contains(words, word):  # keep each string once
+                    words.append(word)  # add it
+        else:  # nothing repeats: the path is just one string
+            words.append(_derive(path, 1))  # derive it once
+        total += length(words)  # count these strings
+        paths.append({"path": label, "words": words})  # keep the path with its strings
+    if length(paths) >= MAX_PATHS:  # we may have left paths out
+        capped = True  # tell the page
     return {  # the full answer for the page
         "read": describe(tree),  # how the operators were grouped
-        "max_len": max_len,  # the length limit that was used
-        "count": length(words),  # how many strings there are
-        "capped": length(words) >= CAP,  # True if we stopped early
-        "words": words,  # the strings themselves
+        "iterations": iterations,  # the iteration count that was used
+        "count": total,  # how many strings there are
+        "capped": capped,  # True if we stopped early
+        "paths": paths,  # the paths, each with its strings in iteration order
     }

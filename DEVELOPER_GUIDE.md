@@ -210,9 +210,9 @@ The files in `public/static/` are frontend handlers. They do not implement the a
 ### Example: `public/static/regex.js`
 `regex.js` does this:
 
-- reads the expression and the max-length slider
+- reads the expression and the iterations slider
 - sends both to `/api/regex`
-- receives the generated strings and how the expression was grouped
+- receives the generated paths (each with one string per iteration) and how the expression was grouped
 - writes the output into `#regex-output`
 
 It is only responsible for the Regular Operations tab UI and request flow.
@@ -249,7 +249,7 @@ The files under `traversal_toolkit/` contain the actual algorithmic and data-pro
 
 ### `traversal_toolkit/regex_ops.py`
 - parses expressions with `*`, `+`, `|`, `( )` and concatenation
-- generates the strings an expression produces, shortest first
+- generates the strings an expression produces as one depth-first derivation per `|` path, counted in iterations rather than string length
 
 In short:
 - `public/static/*.js` = browser-side UI + API calls

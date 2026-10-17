@@ -1,32 +1,27 @@
 <section id="page-tree" class="page active">
-  <p class="hint">Type an expression into <strong>any one</strong> box and press Enter (or Build). The other two fill in automatically.</p>
   <p id="tree-error" role="alert"></p>
- 
-  <div class="tree-head">
-    <h3>Preorder (prefix) <small>Root → Left → Right</small></h3>
+
+  <div class="tree-controls">
     <div class="tree-entry">
-      <input id="in-prefix" placeholder="" aria-label="Prefix expression">
-      <button type="button" data-build="prefix">Build</button>
+      <input id="tree-input" placeholder="e.g. A+B/D-E  or  - + A / B D E  or  A B D / + E -" aria-label="Expression (infix, prefix or postfix)">
+      <button type="button" id="tree-build">Build</button>
     </div>
   </div>
-  <div class="tree" id="draw-prefix"></div>
- 
-  <div class="tree-head">
-    <h3>Inorder (infix) <small>Left → Root → Right</small></h3>
-    <div class="tree-entry">
-      <input id="in-infix" placeholder="" aria-label="Infix expression">
-      <button type="button" data-build="infix">Build</button>
+
+  <p id="tree-detected" class="tree-detected"></p>
+
+  <div class="tree-controls">
+    <span class="tree-label">Show output as</span>
+    <div class="tree-switch" role="group" aria-label="Output traversal">
+      <button type="button" data-output="prefix">Preorder</button>
+      <button type="button" data-output="infix">Inorder</button>
+      <button type="button" data-output="postfix">Postorder</button>
     </div>
   </div>
-  <div class="tree" id="draw-infix"></div>
- 
+
   <div class="tree-head">
-    <h3>Postorder (postfix) <small>Left → Right → Root</small></h3>
-    <div class="tree-entry">
-      <input id="in-postfix" placeholder="" aria-label="Postfix expression">
-      <button type="button" data-build="postfix">Build</button>
-    </div>
+    <h3 id="tree-title">Postorder (postfix) <small>Left → Right → Root</small></h3>
   </div>
-  <div class="tree" id="draw-postfix"></div>
+  <div id="tree-output" class="tree-output"></div>
+  <div class="tree" id="tree-draw"></div>
 </section>
- 

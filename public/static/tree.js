@@ -1,36 +1,54 @@
-// Binary Tree tab: type an expression in prefix, infix OR postfix and the other two fill in.
+// Binary Tree tab: type an expression in prefix, infix OR postfix (it is detected automatically), then switch the output between preorder, inorder and postorder.
 const treeSection = document.getElementById('page-tree'); // the whole Binary Tree page
 if (treeSection) { // only run when this page exists in the HTML
   const style = document.createElement('style'); // small bit of CSS just for this page
-  style.textContent = `#page-tree .tree-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 8px}
-  #page-tree .tree-head h3{margin:0}#page-tree .tree-head small{font-weight:400;opacity:.7;margin-left:8px}
+  style.textContent = `#page-tree .tree-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}
+  #page-tree .tree-label{font-weight:600}
+  #page-tree .tree-detected{margin:4px 0 0;min-height:1.2em;opacity:.85}
   #page-tree .tree-entry{display:flex;gap:8px;flex:1;min-width:260px;max-width:520px}#page-tree .tree-entry input{flex:1;min-width:0}
+  #page-tree .tree-switch{display:flex;gap:6px;flex-wrap:wrap}
+  #page-tree .tree-switch button{background:#262635;color:var(--ink);border:1px solid var(--line)}
+  #page-tree .tree-switch button:hover{border-color:var(--acc)}
+  #page-tree .tree-switch button[aria-pressed="true"]{background:var(--acc);color:#fff;border-color:var(--acc)}
+  #page-tree .tree-head{margin:18px 0 8px}#page-tree .tree-head h3{margin:0}
+  #page-tree .tree-head small{font-weight:400;opacity:.7;margin-left:8px}
+  #page-tree .tree-output{margin:8px 0;font-family:monospace;font-size:15px;min-height:1.2em}
   #page-tree .tree{overflow-x:auto;border-radius:8px}#tree-error{color:#e5534b;min-height:1.2em;margin:6px 0 0}`;
   document.head.append(style);
- 
+
   const esc = (value) => String(value) // makes text safe to put inside HTML
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
- 
+
   const treeError = document.getElementById('tree-error'); // where error messages appear
-  const kinds = { // one entry per box: its input, its drawing area, and which visit order it shows
-    prefix:  { input: document.getElementById('in-prefix'),  draw: document.getElementById('draw-prefix'),  order: 'pre' },
-    infix:   { input: document.getElementById('in-infix'),   draw: document.getElementById('draw-infix'),   order: 'in' },
-    postfix: { input: document.getElementById('in-postfix'), draw: document.getElementById('draw-postfix'), order: 'post' },
+  const input = document.getElementById('tree-input'); // the one expression box
+  const detected = document.getElementById('tree-detected'); // says which input format was recognised
+  const output = document.getElementById('tree-output'); // the text of the chosen traversal
+  const title = document.getElementById('tree-title'); // heading above the output
+  const draw = document.getElementById('tree-draw'); // where the tree is drawn
+  const switchButtons = document.querySelectorAll('[data-output]'); // the Preorder / Inorder / Postorder buttons
+
+  const kinds = { // one entry per traversal: its name, how it is visited, and its rule
+    prefix:  { order: 'pre',  name: 'Preorder',  alias: 'prefix',  rule: 'Root → Left → Right' },
+    infix:   { order: 'in',   name: 'Inorder',   alias: 'infix',   rule: 'Left → Root → Right' },
+    postfix: { order: 'post', name: 'Postorder', alias: 'postfix', rule: 'Left → Right → Root' },
   };
- 
+
+  let data = null; // the last answer from the server (null until a tree is built)
+  let outputKind = 'postfix'; // which traversal is shown right now
+
   const OPERATORS = '+-*/^'; // the operators we understand
   const isOperator = (value) => value.length === 1 && OPERATORS.includes(value); // is this symbol an operator?
- 
+
   function operand(token) { // checks that a symbol is a valid operand (letters, numbers, _ or .)
     if (!/^[A-Za-z0-9_.]+$/.test(token)) throw new Error(`"${token}" is not a valid operand or operator.`);
     return token;
   }
- 
+
   function symbols(text) { // split the typed text into symbols
     const parts = text.trim().split(/\s+/).filter(Boolean); // split on spaces
     return parts.length === 1 && parts[0].length > 1 ? [...parts[0]] : parts; // no spaces at all: one character per symbol
   }
- 
+
   function prefixToInfix(tokens) { // prefix -> fully bracketed infix, e.g. - + A B C -> ((A+B)-C)
     let pos = 0; // how many symbols we have used so far
     function read() { // read one whole sub-expression
@@ -43,7 +61,7 @@ if (treeSection) { // only run when this page exists in the HTML
     if (pos < tokens.length) throw new Error('The prefix expression has extra symbols at the end.');
     return result;
   }
- 
+
   function postfixToInfix(tokens) { // postfix -> fully bracketed infix, e.g. A B + C - -> ((A+B)-C)
     const stack = []; // finished sub-expressions waiting for an operator
     for (const token of tokens) {
@@ -58,20 +76,27 @@ if (treeSection) { // only run when this page exists in the HTML
     if (stack.length !== 1) throw new Error('The postfix expression is missing an operator.');
     return stack[0];
   }
- 
+
+  function detect(text) { // which format was typed?  operator first = prefix, operator last = postfix, otherwise infix
+    if (/[()]/.test(text)) return 'infix'; // brackets only appear in infix
+    const tokens = symbols(text);
+    if (isOperator(tokens[0])) return 'prefix'; // starts with an operator, e.g. - + A / B D E
+    if (isOperator(tokens[tokens.length - 1])) return 'postfix'; // ends with an operator, e.g. A B D / + E -
+    return 'infix'; // starts and ends with an operand, e.g. A+B/D-E
+  }
+
   function toInfix(kind, text) { // whatever was typed -> infix text the server understands
-    if (!text.trim()) throw new Error('Type an expression first.');
     if (kind === 'infix') return text; // already infix
     const tokens = symbols(text);
     return kind === 'prefix' ? prefixToInfix(tokens) : postfixToInfix(tokens);
   }
- 
+
   const walk = { // visit order of the nodes
     pre:  (n) => n ? [n, ...walk.pre(n.l), ...walk.pre(n.r)] : [], // root, left, right
     in:   (n) => n ? [...walk.in(n.l), n, ...walk.in(n.r)] : [], // left, root, right
     post: (n) => n ? [...walk.post(n.l), ...walk.post(n.r), n] : [], // left, right, root
   };
- 
+
   function drawTree(root, order) { // draw one tree; badges show the visit number for this order
     const slots = new Map(walk.in(root).map((n, i) => [n, i])); // sideways position = inorder position
     const visit = walk[order](root); // nodes in the order they are visited
@@ -90,55 +115,61 @@ if (treeSection) { // only run when this page exists in the HTML
         `<circle cx="${px(n) + 14}" cy="${py(n) - 14}" r="9" fill="#0e7c86"/>` +
         `<text x="${px(n) + 14}" y="${py(n) - 10}" text-anchor="middle" font-size="11" fill="#fff">${visit.indexOf(n) + 1}</text>`).join('') + '</svg>';
   }
- 
-        for (const info of Object.values(kinds)) { // a separate output line above each tree
-    info.out = document.createElement('div');
-    info.out.style.cssText = 'margin:8px 0;font-family:monospace;font-size:15px;min-height:1.2em';
-    info.draw.before(info.out);
+
+  function render() { // show the chosen traversal: heading, output text, numbered tree and which button is pressed
+    const info = kinds[outputKind];
+    title.innerHTML = `${esc(info.name)} (${esc(info.alias)}) <small>${esc(info.rule)}</small>`; // heading changes with the choice
+    switchButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.output === outputKind)));
+    if (!data) { output.textContent = ''; draw.innerHTML = ''; return; } // nothing built yet
+    output.textContent = info.name + ' output: ' + data[outputKind]; // the traversal written out
+    draw.innerHTML = drawTree(data.tree, info.order); // numbers on the tree follow the chosen order
   }
 
-  async function build(kind) { // runs when you press Build or Enter in the box called `kind`
-    treeError.textContent = ''; // clear the old error
-    if (!kinds[kind].input.value.trim()) { resetAll(); return; } // empty box: reset everything
+  async function build() { // runs when you press Build or Enter in the box
+    treeError.textContent = ''; detected.textContent = ''; // clear the old error and message
+    if (!input.value.trim()) { resetAll(); return; } // empty box: reset everything
     try {
-      const expr = toInfix(kind, kinds[kind].input.value); // convert what was typed to infix
+      const kind = detect(input.value); // work out whether it is prefix, infix or postfix
+      const expr = toInfix(kind, input.value); // convert it to infix for the server
       const response = await fetch('/api/expression', { // ask the server to build the tree
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expr })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'That expression is not valid.');
-      for (const [name, info] of Object.entries(kinds)) { // update all three sections
-        info.out.textContent = name === kind ? '' : 'Output: ' + data[name]; // text shows here, never in the input box
-        info.draw.innerHTML = drawTree(data.tree, info.order); // redraw the tree with this order's numbers
-      }
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'That expression is not valid.');
+      data = result; // keep the answer so switching the output needs no new request
+      outputKind = kind; // jump to the matching tab: prefix -> Preorder, infix -> Inorder, postfix -> Postorder
+      detected.textContent = 'Detected input: ' + kinds[kind].name + ' (' + kinds[kind].alias + ')'; // tell the user what was recognised
+      render();
     } catch (error) {
       treeError.textContent = error.message; // show the problem
+      data = null; render(); // clear the old tree so it is not mistaken for this expression
     }
   }
 
-  for (const [name, info] of Object.entries(kinds)) { // wire up each box
-    info.input.addEventListener('keydown', (event) => { if (event.key === 'Enter') build(name); }); // Enter builds
-  }
-  document.querySelectorAll('[data-build]').forEach((button) => { // wire up each Build button
-    button.addEventListener('click', () => build(button.dataset.build));
+  switchButtons.forEach((button) => { // switching the OUTPUT traversal: no rebuild needed
+    button.addEventListener('click', () => { outputKind = button.dataset.output; render(); });
   });
 
-  function resetAll() { // clear all three boxes, outputs, trees and any error
-    treeError.textContent = '';
-    for (const info of Object.values(kinds)) { info.input.value = ''; info.out.textContent = ''; info.draw.innerHTML = ''; }
-    kinds.prefix.input.focus(); // ready for a new expression
+  input.addEventListener('keydown', (event) => { if (event.key === 'Enter') build(); }); // Enter builds
+  document.getElementById('tree-build').addEventListener('click', build); // Build button
+
+  function resetAll() { // clear the box, output, tree and any error
+    treeError.textContent = ''; detected.textContent = '';
+    data = null; input.value = '';
+    render();
+    input.focus(); // ready for a new expression
   }
 
   const resetButton = document.createElement('button'); // the Reset button
   resetButton.type = 'button';
   resetButton.textContent = 'Reset';
-  const buildButton = document.querySelector('[data-build]');
-  if (buildButton) resetButton.className = buildButton.className; // copy the Build button's look
+  resetButton.className = document.getElementById('tree-build').className; // copy the Build button's look
   resetButton.addEventListener('click', resetAll);
 
   const resetBar = document.createElement('div'); // puts the button at the bottom centre
   resetBar.style.cssText = 'display:flex;justify-content:center;margin:24px 0';
   resetBar.append(resetButton);
   treeSection.append(resetBar);
+
+  render(); // start with the Postorder button selected
 }
- 

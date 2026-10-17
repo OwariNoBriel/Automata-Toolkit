@@ -4,15 +4,21 @@
       <div class="field"><label for="textA">Text A</label><input id="textA" autocomplete="off"></div>
       <div class="field"><label for="textB">Text B</label><input id="textB" autocomplete="off"></div>
 
+      <div class="field">
+        <label for="textOut">Output (Text A)</label>
+        <div id="textOut" class="out-box" aria-live="polite"></div>
+      </div>
+
       <div class="btn-row" id="ops">
-        <button data-op="concat">Concat (+ B)</button>
+        <button data-op="concatAB">Concat (A + B)</button>
+        <button data-op="concatBA">Concat (B + A)</button>
         <button data-op="reverse">Reverse</button>
         <button data-op="upper">Uppercase</button>
         <button data-op="lower">Lowercase</button>
       </div>
       <div class="btn-row">
-        <button id="undo" class="ghost">Undo</button>
-        <button id="reset" class="ghost">Reset</button>
+        <button id="undo">Undo</button>
+        <button id="reset">Reset</button>
       </div>
     </div>
 
@@ -25,9 +31,16 @@
       <h3>Result</h3>
       <div class="kv"><span>Current</span><b id="outCurrent"></b></div>
       <div class="kv"><span>Length</span><b id="outLength"></b></div>
-      <div class="kv"><span>Prefixes</span><b id="outPrefixes"></b></div>
-      <div class="kv"><span>Suffixes</span><b id="outSuffixes"></b></div>
       <div class="kv"><span>Palindrome</span><b id="outPal"></b></div>
+    </div>
+
+    <div class="card">
+      <h3>Prefixes &amp; Suffixes</h3>
+      <div class="btn-row" id="lists">
+        <button data-list="prefixes" aria-pressed="false">Prefixes</button>
+        <button data-list="suffixes" aria-pressed="false">Suffixes</button>
+      </div>
+      <div id="textInfo" class="info-box" hidden></div>
     </div>
 
     <div class="card">
@@ -35,8 +48,8 @@
       <div class="field">
         <label for="convMode">Conversion</label>
         <select id="convMode">
-          <option value="prefix-str">Prefixes → Infix</option>
-          <option value="suffix-str">Suffixes → Infix</option>
+          <option value="prefix">Prefixes → Original</option>
+          <option value="suffix">Suffixes → Original</option>
         </select>
       </div>
       <div class="field"><label for="convIn">Prefixes / Suffixes</label><input id="convIn" autocomplete="off"></div>

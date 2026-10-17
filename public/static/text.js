@@ -6,14 +6,23 @@
   const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const dash = s => (s === '' ? '—' : s);
 
-  /* ---------- string pipeline ---------- */
+  // Operations that change the text. Each takes the current text (and B) and returns the new text.
   const OPS = {
-    concat:  { label: 'Concat (+ B)', fn: (v, b) => v + b },
-    reverse: { label: 'Reverse',      fn: v => [...v].reverse().join('') },
-    upper:   { label: 'Uppercase',    fn: v => v.toUpperCase() },
-    lower:   { label: 'Lowercase',    fn: v => v.toLowerCase() },
+    concatAB: { label: 'Concat (A + B)', fn: (v, b) => v + b },
+    concatBA: { label: 'Concat (B + A)', fn: (v, b) => b + v },
+    reverse:  { label: 'Reverse',        fn: v => [...v].reverse().join('') },
+    upper:    { label: 'Uppercase',      fn: v => v.toUpperCase() },
+    lower:    { label: 'Lowercase',      fn: v => v.toLowerCase() },
   };
-  let pipeline = [];
+
+  // Lists about the current text (they don't change it).
+  const LISTS = {
+    prefixes: chars => chars.map((_, i) => chars.slice(0, i + 1).join('')),
+    suffixes: chars => chars.map((_, i) => chars.slice(chars.length - 1 - i).join('')),
+  };
+
+  let pipeline = [];      // the operations clicked so far (replayed from Text A every time, so B stays live)
+  let activeList = null;  // 'prefixes' | 'suffixes' | null
 
   function render() {
     if (!$('textA') || !$('steps')) return;
@@ -24,50 +33,64 @@
       v = OPS[key].fn(v, b);
       rows.push({ label: OPS[key].label, value: v });
     }
+    const chars = [...v];
+
+    $('textOut').textContent = dash(v);
+
     $('steps').innerHTML =
       '<tr><th>Step</th><th>Value</th><th>Length</th></tr>' +
       rows.map(r => `<tr><td>${r.label}</td><td>${esc(dash(r.value))}</td><td>${[...r.value].length}</td></tr>`).join('');
 
-    const chars = [...v];
-    $('outCurrent').textContent  = dash(v);
-    $('outLength').textContent   = chars.length;
-    $('outPrefixes').textContent = dash(chars.map((_, i) => chars.slice(0, i + 1).join('')).join(', '));
-    $('outSuffixes').textContent = dash(chars.map((_, i) => chars.slice(chars.length - 1 - i).join('')).join(', '));
-    $('outPal').textContent      = v === '' ? '—' : (v === [...chars].reverse().join('') ? 'Yes' : 'No');
+    $('outCurrent').textContent = dash(v);
+    $('outLength').textContent  = chars.length;
+    $('outPal').textContent     = v === '' ? '—' : (v === [...chars].reverse().join('') ? 'Yes' : 'No');
+
+    document.querySelectorAll('#lists [data-list]').forEach(btn =>
+      btn.setAttribute('aria-pressed', String(btn.dataset.list === activeList)));
+    const box = $('textInfo');
+    if (activeList) {
+      const items = LISTS[activeList](chars);
+      box.textContent = items.length ? items.join(', ') : '—';
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+    }
   }
 
-  /* ---------- prefix / suffix restorer ---------- */
-  function restore(text, kind) { // kind is 'prefix' or 'suffix'
-    const parts = text.split(/[,\s]+/).filter(Boolean); // split on commas and spaces
-    if (!parts.length) return '';
-    const whole = parts.reduce((a, b) => (b.length > a.length ? b : a)); // longest piece = the original
-    const bad = parts.find(p => !(kind === 'prefix' ? whole.startsWith(p) : whole.endsWith(p)));
-    if (bad) throw Error(`"${bad}" is not a ${kind} of "${whole}".`);
-    return whole;
-  }
-
+  /* ---------- restore original string from prefixes / suffixes ---------- */
   const MODES = {
-    'prefix-str': { kind: 'prefix'},
-    'suffix-str': { kind: 'suffix'},
+    prefix: { hint: 'e.g. a, ab, abc',  test: (whole, p) => whole.startsWith(p) },
+    suffix: { hint: 'e.g. c, bc, abc',  test: (whole, p) => whole.endsWith(p) },
   };
 
   function convert() {
     if (!$('convMode')) return;
-    const m = MODES[$('convMode').value];
+    const kind = MODES[$('convMode').value] ? $('convMode').value : 'prefix';
+    const m = MODES[kind];
     $('convIn').placeholder = m.hint;
     $('convErr').textContent = '';
-    try {
-      $('convOut').textContent = dash(restore($('convIn').value, m.kind));
-    } catch (e) {
+    const parts = $('convIn').value.split(/[,\s]+/).filter(Boolean);
+    if (!parts.length) { $('convOut').textContent = '—'; return; }
+    const whole = parts.reduce((a, p) => (p.length > a.length ? p : a)); // longest piece = the original
+    const bad = parts.find(p => !m.test(whole, p));
+    if (bad) {
       $('convOut').textContent = '—';
-      $('convErr').textContent = e.message;
+      $('convErr').textContent = `"${bad}" is not a ${kind} of "${whole}".`;
+    } else {
+      $('convOut').textContent = whole;
     }
   }
 
   /* ---------- events (delegated, so load order doesn't matter) ---------- */
   document.addEventListener('click', e => {
-    const opBtn = e.target.closest('#ops [data-op]');
-    if (opBtn) { pipeline.push(opBtn.dataset.op); render(); return; }
+    const op = e.target.closest('#ops [data-op]');
+    if (op) { pipeline.push(op.dataset.op); render(); return; }
+    const list = e.target.closest('#lists [data-list]');
+    if (list) {
+      activeList = activeList === list.dataset.list ? null : list.dataset.list; // click again to hide
+      render();
+      return;
+    }
     if (e.target.closest('#undo'))  { pipeline.pop(); render(); }
     if (e.target.closest('#reset')) { pipeline = []; render(); }
   });
@@ -79,10 +102,5 @@
     if (e.target.id === 'convMode') convert();
   });
 
-  // draw as soon as the template shows up in the page
-  new MutationObserver(() => {
-    const a = $('textA');
-    if (a && !a.dataset.ready) { a.dataset.ready = '1'; render(); convert(); }
-  }).observe(document.body, { childList: true, subtree: true });
   render(); convert();
 })();
